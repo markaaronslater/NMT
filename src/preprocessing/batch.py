@@ -14,6 +14,8 @@ def getBatch(batch_PairSentIndices, dev):
     
     batch_srcSentIndices = []
     batch_trgSentIndices = []
+
+    ### ???am i only zipping them up just to instantly unzip them again...???
     for pair in batch_PairSentIndices: # "unzip"
         batch_srcSentIndices.append(pair[0])
         batch_trgSentIndices.append(pair[1])

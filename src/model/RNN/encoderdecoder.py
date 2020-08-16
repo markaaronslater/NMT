@@ -196,6 +196,8 @@ class Decoder(nn.Module):
         if decoder_params['tie_weights']:
             self.projectToV = nn.Linear(self.input_size, self.vocab_size) 
             #assert self.hidden_size == self.input_size
+
+            ###???how do these dimensions work out, again???
             self.projectToV.weight = self.trg_embeddings.weight
             self.init_weights()
             if self.attention != None:
@@ -219,6 +221,7 @@ class Decoder(nn.Module):
 
     def forward(self, decoder_inputs_batch, padded_encoder_states, decoder_initial_state, src_lengths):
         if not self.tf: # not teaching forcing (making prediction for a single sentence instead)
+            ###???isnt it predicting entire dev batch, not a single sentence???
             # don't need the input (decoder_inputs_batch = None), so skip its preprocessing steps
             if self.inf_alg == "greedy_search":
                 return self.getGreedyTranslation(decoder_inputs_batch, padded_encoder_states, decoder_initial_state, src_lengths)
@@ -282,8 +285,8 @@ class Decoder(nn.Module):
         sosIdx = self.sosIdx
         eosIdx = self.eosIdx
         bsz = encoder_states.size(0)
-        decoder_inputs_tensor = torch.full((bsz, 1), sosIdx).long().cuda() # (bsz x 1)
-        trg_lengths = torch.full((bsz,), 1).long().cuda()
+        decoder_inputs_tensor = torch.full((bsz, 1), sosIdx, dtype=torch.long).cuda() # (bsz x 1)
+        trg_lengths = torch.full((bsz,), 1, dtype=torch.long).cuda()
 
         mask = decoder_inputs_batch[0]
         corpus_indices = decoder_inputs_batch[1]
@@ -364,6 +367,9 @@ class Decoder(nn.Module):
         eosIdx = self.eosIdx
         bsz = encoder_states.size(0) # 1
         enc_d_hid = encoder_states.size(2) # varies depending on if bienc
+
+
+        ### fix these full specs!!!
         trg_lengths = torch.full((bsz,), 1).long().cuda()
         trg_lengths2 = torch.full((self.beam_size,), 1).long().cuda()
         mask = decoder_inputs_batch[0]

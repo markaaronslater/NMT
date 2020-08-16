@@ -32,6 +32,7 @@ def train(translator, optimizer, trainBatches, devBatches, references, num_epoch
             optimizer.step()
         
         # save model checkpoint after each epoch ###
+        ###!!!place this in a helper function. put all relevant data in a dictionary so can pass with single param, etc.
         if save:
             torch.save({
                 'epoch': ep,

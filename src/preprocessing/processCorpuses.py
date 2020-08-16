@@ -76,6 +76,8 @@ def to_sentences(texts):
 # -> now handled by namesTable
 
 # decase the words that follow end of sentence symbols:
+
+### !!!change this to eos_symbols, or something
 eos = {}
 for key in [".", "!", "?", ":", "..", "...", "...."]:
     eos[key] = 1
@@ -127,6 +129,7 @@ def normalizeCorpuses(path):
 
     # stage 3-decase corpuses -> produces training corpuses. for De -> En, only 
     # necessary for train_src, train_trg, dev_src and test_src
+    ### ???wait, why did i do this for the dev and test source sentences, too. isnt that cheating???
     decased_texts = decaseCorpuses(tok_texts, path, de_namesTable, en_namesTable)
 
     return decased_texts
@@ -195,9 +198,12 @@ def naiveDecase(sent, namesDict):
 
     sent = sent.split()
     #if sent[0] not in Iwords and sent[0] not in acList:
+
+    # lower case first word of the sentence:
     if sent[0] not in namesDict:
         sent[0] = sent[0][0].lower() + sent[0][1:] # this handles leading acronyms, like people's names, followed by :
     # ex) BG -> bG, not bg, so that when predict this during inference, can recase to BG, not Bg
+    ### (this format is common in the corpus, bc transcripts of TED-talks, where diff speakers will precede given sentences, in a dialogue exchange, etc.)
 
     positions = [i for i,word in enumerate(sent) if (word in eos or word == '"') and i != len(sent)-1]
     #quotePositions = [i for i,word in enumerate(sent) if word == '"' and i != len(sent)-1]
@@ -233,8 +239,11 @@ def naiveRecase(sent):
     # only capitalize word after endquote if word before endquote was eos
     # capitalize word after startquote ??always??
 
-    # ex) " that's right , " he said . -> " That's right , " he said.
-    # ex) I said , " yes , sir . I did . " and we started arguing . -> I said , " Yes , sir . I did . " And we started arguing .
+    # ex) " that's right , " he said .
+    # ->  " That's right , " he said.
+
+    # ex) I said , " yes , sir . I did . " and we started arguing .
+    # ->  I said , " Yes , sir . I did . " And we started arguing .
 
     for j in quotePositions[::2]: # capitalize the first word inside each pair of double-quotes
         sent[j+1] = sent[j+1].capitalize()
@@ -343,6 +352,8 @@ def createNamesTable(path, namesFile, train_sentences): # list of str(sentence)'
     # want to track all words that should not be decased in namesTable,
     # so include certain acronyms like Mr.,
     # and fix bug where corpus had a few occurrences of i and i'm
+
+    ### ???why am i not also including I've, I'd, I'll, etc., here??
     namesTable["I"] = 1
     namesTable["I'm"] = 1
     acList = ["Mr.", "Mrs.", "Dr.", "Ms.", "St.", "Mt.", "Lt."] # do not decase these
@@ -424,6 +435,7 @@ def removeOOV(sentences, trimmed_vocab):
 # prepend and append trg sentences with start-of-sentence token, <sos>, and end-of-sentence token, <eos>, respectively
 # trg_sentences is a list of lists of str(word)'s
 def add_start_end_tokens(trg_sentences):
+    ###???is this list concat a constant time op??? is it creating a copy???
     return [['<sos>'] + sent + ['<eos>'] for sent in trg_sentences]
     
 
@@ -459,8 +471,8 @@ def computeVocabs(src_sentences, trg_sentences):
 
 
 
-# vocab files contain lines of the form "subword count"
-# i assume im supposed to conflate the same morpheme of both langs into single entry/meaning
+# vocab files contain lines of the form "<subword> <count>"
+# i assume i'm supposed to conflate the same morpheme of both langs into single entry/meaning
 def computeBPEvocabs(src_vocab_file, trg_vocab_file):
     vocab = {'<pad>':0, '<sos>':1, '<eos>':2}
     with open(src_vocab_file, "r") as f:
@@ -502,14 +514,18 @@ def toIndices(sentences, vocab):
             try:
                 idx_sent.append(vocab[word])
             except KeyError:
-                print("error: unknown word: {} in sent: {}".format(word, sent))
+                ### not quite sure why this happens. maybe some sort of quirk in the subword-nmt script. i'll figure it out later.
+                # one clue is that they all seem to be special unicode ch's. maybe i am not using proper encoding scheme.
+                print("warning: unknown word: {} in sent: {}".format(word, sent))
+                print("removed it from the sentence.")
+                print()
         idx_sentences.append(idx_sent)
 
     return idx_sentences
 
 
 
-
+###???do i even use this???
 # assuming all parameters contain normalized sentences, creates normalized corpus counterparts in file form to be processed by learnBPE
 def normalizeFiles(path, train_src_sentences, train_trg_sentences, dev_src_sentences, dev_trg_sentences, test_src_sentences):
     with open(path + "norm_train.de", "w") as f:
