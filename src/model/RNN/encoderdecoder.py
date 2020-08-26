@@ -87,8 +87,8 @@ class Encoder(nn.Module):
 
         bsz = encoder_states.size(0) # varies for "remainder" batch
         d_hid = encoder_states.size(2) # varies if bidirectional
-        out_mask = torch.nn.functional.dropout(torch.ones(bsz, 1, d_hid).cuda(), p=self.out_drop, training=self.training)
-        encoder_states = encoder_states * out_mask
+        #out_mask = torch.nn.functional.dropout(torch.ones(bsz, 1, d_hid).cuda(), p=self.out_drop, training=self.training)
+        #encoder_states = encoder_states * out_mask
 
 
         if self.bi_enc:
@@ -259,8 +259,8 @@ class Decoder(nn.Module):
             bsz = decoder_states.size(0)
 
 
-            out_mask = torch.nn.functional.dropout(torch.ones(bsz, 1, self.hidden_size).cuda(), p=self.out_drop, training=self.training)
-            decoder_states = decoder_states * out_mask
+            #out_mask = torch.nn.functional.dropout(torch.ones(bsz, 1, self.hidden_size).cuda(), p=self.out_drop, training=self.training)
+            #decoder_states = decoder_states * out_mask
 
             packed_decoder_states = self.get_attStates(decoder_states, padded_encoder_states, trg_lengths, mask)
         else:
