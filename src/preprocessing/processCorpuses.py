@@ -14,6 +14,49 @@ import re
 import string
 ##### Performs all preprocessing and stores results in series of files that are directly loaded by encoderdecoder
 
+# # pass path to toy corpuses
+# def load_docs(path, bpe=False, tok=False, decased=False):
+#     prefix = ''
+#     infix = ''
+
+#     if bpe:
+#         infix = '.BPE'
+#     elif tok:
+#         prefix = 'tok_'
+#     elif decased:
+#         prefix = 'decased_'
+
+#     train_srcFile = prefix + 'train' + infix + '.de'
+#     train_trgFile = prefix + 'train' + infix + '.en'
+#     # dev_srcFile = prefix + 'dev' + infix + '.de'
+#     # dev_trgFile = prefix + 'dev' + infix + '.en'
+#     # test_srcFile = prefix + 'test' + infix + '.de'
+
+            
+#     with open(path + train_srcFile, mode='rt', encoding='utf-8') as f:
+#         train_srctext = f.read()
+
+#     with open(path + train_trgFile, mode='rt', encoding='utf-8') as f:
+#         train_trgtext = f.read()
+
+#     # with open(path + dev_srcFile, mode='rt', encoding='utf-8') as f:
+#     #     dev_srctext = f.read()
+
+#     # with open(path + dev_trgFile, mode='rt', encoding='utf-8') as f:
+#     #     dev_trgtext = f.read()
+    
+#     # with open(path + test_srcFile, mode='rt', encoding='utf-8') as f:
+#     #     test_srctext = f.read()
+
+
+
+#     texts = to_sentences([train_srctext, train_trgtext])
+#     return texts
+
+
+
+
+
 # load the corpus files into strings and then converts each into list of sentences
 def load_docs(path, bpe=False, tok=False, decased=False):
     prefix = ''
@@ -55,7 +98,8 @@ def load_docs(path, bpe=False, tok=False, decased=False):
 # pass a list of texts, and produces list of lists of str(sentences)
 def to_sentences(texts):
     return [text.strip().split('\n') for text in texts]
-    
+    #return [text.split('\n') for text in texts] # for debug, allow empty sent
+
 
 
 
@@ -112,7 +156,9 @@ acronyms = re.compile(r'(Mr|Mrs|Dr|Ms|etc|ca|St|Mt|Lt)\s\.')
 
 def normalizeCorpuses(path):
     texts = load_docs(path)
-
+    # print("texts:")
+    # print(texts)
+    # print()
     # stage 0-remove songs and sentences over 100 words in length from train sets
     texts[0], texts[1] = filterSentences(texts[0], texts[1])
 
@@ -121,7 +167,9 @@ def normalizeCorpuses(path):
     # to trainset) and dev_trg (when estimating model's translation ability
     # after finish an epoch)
     tok_texts = tokenizeCorpuses(texts, path)
-
+    # print("tok_texts:")
+    # print(tok_texts)
+    # print()
     # stage 2-create names tables -> produces dictionaries of words that 
     # should not be lowercased
     de_namesTable, _ = createNamesTable(path, "names.de", tok_texts[0][:])
@@ -131,12 +179,15 @@ def normalizeCorpuses(path):
     # necessary for train_src, train_trg, dev_src and test_src
     ### ???wait, why did i do this for the dev and test source sentences, too. isnt that cheating???
     decased_texts = decaseCorpuses(tok_texts, path, de_namesTable, en_namesTable)
-
+    # print("decased_texts:")
+    # print(decased_texts)
+    # print()
     return decased_texts
 
 def tokenizeCorpuses(corpuses, path):
     corpus_names = ["train.de", "train.en", "dev.de", "dev.en", "test.de"]
-    
+    #corpus_names = ["train.de", "train.en"]
+
     tok_corpuses = []
     for corpus_idx, corpus in enumerate(corpuses):
         tok_corpus = []
@@ -146,7 +197,7 @@ def tokenizeCorpuses(corpuses, path):
             for sent in corpus:
                 sent = naiveTokenize(sent)
                 tok_corpus.append(sent)
-                f.write(sent + '\n')
+                f.write(sent + '\n') #!!! this is why references diff length than trgs, bc adding a newline
             tok_corpuses.append(tok_corpus)
 
     return tok_corpuses
@@ -154,6 +205,8 @@ def tokenizeCorpuses(corpuses, path):
 
 def decaseCorpuses(corpuses, path, de_namesTable, en_namesTable):
     corpus_names = ["train.de", "train.en", "dev.de", "dev.en", "test.de"]
+    #corpus_names = ["train.de", "train.en"]
+
     decased_corpuses = []
 
     for corpus_idx, corpus in enumerate(corpuses):
@@ -195,6 +248,8 @@ def naiveTokenize(sent):
 
 
 def naiveDecase(sent, namesDict):
+    if not sent:
+        return sent # for debugging empty sentence
 
     sent = sent.split()
     #if sent[0] not in Iwords and sent[0] not in acList:
@@ -227,8 +282,14 @@ def naiveDecase(sent, namesDict):
 # when passed list of str(words), capitalizes first word of sentence
 # and the first word following a double quote
 def naiveRecase(sent):
-    sent[0] = sent[0].capitalize()
+    if not sent:
+        return sent # for debugging empty sentence
 
+    try:
+        sent[0] = sent[0].capitalize()
+    except AttributeError:
+        print(sent)
+        
     eosPositions = [i for i,word in enumerate(sent) if word in eos and i != len(sent)-1]
     quotePositions = [i for i,word in enumerate(sent) if word == '"' and i != len(sent)-1]
     # (do not extract double quote if occurs at last position of sentence, 
@@ -274,6 +335,9 @@ def naiveRecase(sent):
 # addressing fact that moses detokenizer does not correctly handle -
 # given list of str(words), produces str(sentence)
 def formatPrediction(sent):
+    if not sent: # its an empty list, so return an empty string
+        return '' # for debug, empty sentences
+
     sent = naiveRecase(sent) # list of str(words)
     sent = ' '.join(sent) # str(sentence)
     if "-" in sent:

@@ -44,18 +44,43 @@ def getBatch(batch_PairSentIndices, dev):
         decoder_inputs_tensor[k,:trg_lengths[k]] = torch.tensor(decoder_inputs[k]).long()
         target_indices_tensor[k,:trg_lengths[k]] = torch.tensor(target_indices[k]).long()
 
+    print("encoder_inputs_tensor:")
+    print(encoder_inputs_tensor)
+    print()
+    print("decoder_inputs_tensor:")
+    print(decoder_inputs_tensor)
+    print()
+    print("target_indices_tensor:")
+    print(target_indices_tensor)
+    print()
 
-
-
+    # (in DESCENDING order)
     sorted_src_lengths, idxs_in_enc_inputs_tensor = src_lengths.sort(0, descending=True)
+    print("sorted_src_lengths:")
+    print(sorted_src_lengths)
+    print()
+    print("idxs_in_enc_inputs_tensor:")
+    print(idxs_in_enc_inputs_tensor)
+    print()
+
     # -> use idxs_in_enc_inputs_tensor to sort encoder_inputs_tensor in descending order:
     # (only need it now, i.e., don't need to pass it to the encoder)
-    encoder_inputs_tensor = encoder_inputs_tensor[idxs_in_enc_inputs_tensor] 
+    encoder_inputs_tensor = encoder_inputs_tensor[idxs_in_enc_inputs_tensor]
+    print("(sorted) encoder_inputs_tensor:")
+    print(encoder_inputs_tensor)
+    print()
+
+
+
     # -> rename src_lengths to correspond:
     src_lengths = sorted_src_lengths
     # idxs_in_sorted_enc_inputs_tensor holds, at position i, the index within sorted_enc_inputs_tensor
     # of the ith tensor in encoder_inputs_tensor
+    # (in ASCENDING order)
     _, idxs_in_sorted_enc_inputs_tensor = idxs_in_enc_inputs_tensor.sort(0)
+    print("idxs_in_sorted_enc_inputs_tensor:")
+    print(idxs_in_sorted_enc_inputs_tensor)
+    print()
     # -> use it to unsort the resultant encodings back so that they correspond to the sorted decoder_inputs_tensor
     # (need to pass it to encoder)
 

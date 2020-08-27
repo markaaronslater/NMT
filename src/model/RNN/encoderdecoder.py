@@ -204,7 +204,10 @@ class Decoder(nn.Module):
                 self.att_layer = nn.Linear(2*self.hidden_size, self.input_size) 
         
         else:
-            self.projectToV = nn.Linear(self.hidden_size, self.input_size) 
+            ###???why is this projecting to input size, not vocab size???
+            #self.projectToV = nn.Linear(self.hidden_size, self.input_size)
+            self.projectToV = nn.Linear(self.hidden_size, self.vocab_size) 
+ 
             self.trg_embeddings.weight.data.uniform_(-.1, .1)
             if self.attention != None:
                 self.att_layer = nn.Linear(2*self.hidden_size, self.hidden_size) 
@@ -263,10 +266,13 @@ class Decoder(nn.Module):
             #decoder_states = decoder_states * out_mask
 
             packed_decoder_states = self.get_attStates(decoder_states, padded_encoder_states, trg_lengths, mask)
+            del decoder_states
+
         else:
-            packed_decoder_states = packed_decoder_states.data
-        
-        del decoder_states
+            ###!!!this is what it was beforehand. reference before assign
+            #packed_decoder_states = packed_decoder_states.data
+            packed_decoder_states = packed_output
+
         distsOverNextWords = self.logsoftmax1(self.projectToV(packed_decoder_states.data)) # distsOverNextWords is of shape (q x V_trg)
         # convert each dist into a probdist
 
@@ -313,6 +319,8 @@ class Decoder(nn.Module):
                 decoder_state = self.get_attStates(output, encoder_states, trg_lengths, mask)
 
                 # get_attStates() returns (q x hs), which is (bsz x hs), in this case, so of correct shape
+            else:
+                decoder_state = output.data.view(bsz, self.hidden_size)
 
             # (bsz x hs) x (hs x V_trg) = (bsz x V_trg):
             distOverNextWords = self.projectToV(decoder_state.data)
@@ -327,7 +335,9 @@ class Decoder(nn.Module):
             
             # get embeddings, so can pass as next input
             input_i = self.trg_embeddings(indexOfMostLikelyWord) # (bsz x 1 x input_size)
-
+            # print("size of input i:")
+            # print(input_i.size())
+            # print()
 
         # translation is now (bsz x max_src_len+decode_slack)
         tlist = translation.tolist()

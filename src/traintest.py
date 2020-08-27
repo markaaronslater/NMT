@@ -57,7 +57,7 @@ def train(translator, optimizer, trainBatches, devBatches, references, num_epoch
         translator.decoder.tf = True
 
         #ep_stats = 'ep: {:02d}, loss: {:.2f}, ep_t: {:.2f} sec, t_t: {:.2f} sec, bleu1: {:.4f}, bleu2: {:.4f}'.format(ep, ep_loss, ep_time, test_time, nodrop_bleu, drop_bleu)
-        ep_stats = 'ep: {:02d}, loss: {:.2f}, ep_t: {:.2f} sec, t_t: {:.2f} sec, bleu: {:.4f}'.format(ep, ep_loss, ep_time, test_time, drop_bleu)
+        ep_stats = 'ep: {:02d}, loss: {:.8f}, ep_t: {:.2f} sec, t_t: {:.2f} sec, bleu: {:.4f}'.format(ep, ep_loss, ep_time, test_time, drop_bleu)
 
         print(ep_stats)
         with open(folder + 'model_train_stats.txt', 'a') as f:
@@ -130,6 +130,11 @@ def test(translator, devBatches, references, folder, ep, write=True):
 
     # estimate out-of-sample error on dev set with nltk
     bleu_start_time = time.time()
+    # print("references:")
+    # print(references)
+    # print("hypotheses:")
+    # print(hypotheses)
+    # print()
     bleu = corpus_bleu(references, hypotheses)
     bleu_time = time.time() - bleu_start_time
     #!!!must reset translator properties back to training versions, i think
