@@ -13,7 +13,9 @@ import sys
 # further, we now pass it an optimizer rather than initializing inside, so can continue training a checkpointed model
 # folder is the name of the directory that holds checkpoints and translations folders
 def train(translator, optimizer, trainBatches, devBatches, references, num_epochs=10, cur_ep=0, folder='./', save=True):
-    nll = torch.nn.NLLLoss()
+    ###!!!changed from default (mean) to sum:
+    nll = torch.nn.NLLLoss(reduction='sum')
+
     for ep in range(cur_ep, num_epochs):
         ep_loss = 0.
         ep_start_time = time.time()
@@ -25,11 +27,21 @@ def train(translator, optimizer, trainBatches, devBatches, references, num_epoch
             #??why didnt i do this ahead of time??
             packedTargets = pack_padded_sequence(targets_batch[0], targets_batch[1], batch_first=True)
             packedTargets = packedTargets.data
-            batch_loss = nll(packedDists, packedTargets)
+
+            ###for debug:
+            # preds = packedDists.argmax(1)
+            # print(preds)
+            # print(packedTargets)
+            # print()
+
+
+
+
+            batch_loss = nll(packedDists, packedTargets) # loss of predictions of current model weights
             ep_loss += batch_loss.detach()
-            optimizer.zero_grad()
-            batch_loss.backward()
-            optimizer.step()
+            optimizer.zero_grad() # computing SGD, not GD
+            batch_loss.backward() # compute dL/dw for all model weights
+            optimizer.step() # adjust weights in opposite direction of dL/dw
         
         # save model checkpoint after each epoch ###
         ###!!!place this in a helper function. put all relevant data in a dictionary so can pass with single param, etc.

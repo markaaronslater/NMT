@@ -85,6 +85,7 @@ def getBatch(batch_PairSentIndices, dev):
     # (need to pass it to encoder)
 
     # construct mask to be used by attention mechanism of decoder
+    ###???shouldnt this use the UNSORTED src lengths???
     mask = torch.ones(bsz, max_src_len, device=dev) == 1 # construct byte tensor
     for i in range(bsz):
         mask[i, :src_lengths[i]] = 0

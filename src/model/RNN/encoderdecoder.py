@@ -56,7 +56,10 @@ class Encoder(nn.Module):
             self.bridge = nn.Linear(2*self.hidden_size, self.hidden_size)
             self.projKeys = nn.Linear(2*self.hidden_size, self.hidden_size)
         self.src_embeddings = nn.Embedding(self.vocab_size, self.input_size)
-        self.src_embeddings.weight.data.uniform_(-.1, .1)
+
+
+        ###!!!to do: does this diff initialization actually help?
+        #self.src_embeddings.weight.data.uniform_(-.1, .1)
         self.out_drop = encoder_params['out_drop']
         self.tanh = nn.Tanh()
 
@@ -93,28 +96,49 @@ class Encoder(nn.Module):
 
         if self.bi_enc:
             encoder_states = self.projKeys(encoder_states) # project to dim of decoder hs
+            ###???why not also apply a nonlinearity???
+            encoder_states = self.tanh(encoder_states)
         
-            # initialize only the initial hidden state, not the memory cell
+            ### initialize only the initial hidden state, not the memory cell...??why??
+            #decoder_initial_c = torch.zeros_like(decoder_initial_h)
+
             finalForwardStates = hn[0:hn.size(0):2] # nl x bsz x d_hid
             finalBackwardStates = hn[1:hn.size(0):2] # nl x bsz x d_hid
+
+            finalForwardMemStates = cn[0:cn.size(0):2] # nl x bsz x d_hid
+            finalBackwardMemStates = cn[1:cn.size(0):2] # nl x bsz x d_hid
+
+
             decoder_initial_h = torch.cat((finalForwardStates, finalBackwardStates), dim=2) # nl x bsz x 2*d_hid
-            del finalForwardStates, finalBackwardStates
+            #del finalForwardStates, finalBackwardStates
+
+            decoder_initial_c = torch.cat((finalForwardMemStates, finalBackwardMemStates), dim=2) # nl x bsz x 2*d_hid
+
+
             #decoder_initial_h = self.projKeys(decoder_initial_h) # nl x bsz x d_hid
             decoder_initial_h = self.tanh(self.bridge(decoder_initial_h)) # nl x bsz x d_hid
-
-            decoder_initial_c = torch.zeros_like(decoder_initial_h)
+            decoder_initial_c = self.tanh(self.bridge(decoder_initial_c)) # nl x bsz x d_hid
 
         else:
             decoder_initial_h, decoder_initial_c = hn, cn
 
         # each are 3D tensors of size (dec_nl x bsz x dec_hs)
         
+
+
+
+
         # encoder_states serves as the keys/values for attention
         # (decoder_initial_h, decoder_initial_c) serves as encoding that initializes decoder
         # each needs to be unsorted so that align correctly with corresponding trg sentences
         decoder_initial_h = decoder_initial_h[:,idxs_in_sorted_enc_inputs_tensor]
         decoder_initial_c = decoder_initial_c[:,idxs_in_sorted_enc_inputs_tensor]
         decoder_initial_state = (decoder_initial_h, decoder_initial_c)
+
+
+
+
+
 
         # unsorted, padded encoder_states
         #padded_encoder_states = encoder_states[idxs_in_sorted_enc_inputs_tensor]
@@ -128,21 +152,21 @@ class Encoder(nn.Module):
 
 
 
-    def initializeDecoderHidden(self, encoder_final):
-        bsz = encoder_final[0].size()[1]
+    # def initializeDecoderHidden(self, encoder_final):
+    #     bsz = encoder_final[0].size()[1]
 
-        if self.init_scheme == "layer_to_layer":
-            return encoder_final
+    #     if self.init_scheme == "layer_to_layer":
+    #         return encoder_final
 
-        elif self.init_scheme == "final_to_first":
-            decoder_initial_h = torch.zeros(self.num_layers, bsz, self.hidden_size, device=self.dev)
-            decoder_initial_c = torch.zeros(self.num_layers, bsz, self.hidden_size, device=self.dev)
-            # initialize first layer of decoder with last layer of encoder
-            decoder_initial_h[0] = encoder_final[0][-1] 
-            decoder_initial_c[0] = encoder_final[1][-1] 
+    #     elif self.init_scheme == "final_to_first":
+    #         decoder_initial_h = torch.zeros(self.num_layers, bsz, self.hidden_size, device=self.dev)
+    #         decoder_initial_c = torch.zeros(self.num_layers, bsz, self.hidden_size, device=self.dev)
+    #         # initialize first layer of decoder with last layer of encoder
+    #         decoder_initial_h[0] = encoder_final[0][-1] 
+    #         decoder_initial_c[0] = encoder_final[1][-1] 
 
 
-        return (decoder_initial_h, decoder_initial_c)
+    #     return (decoder_initial_h, decoder_initial_c)
 
 
 
@@ -199,8 +223,11 @@ class Decoder(nn.Module):
 
             ###???how do these dimensions work out, again???
             self.projectToV.weight = self.trg_embeddings.weight
-            self.init_weights()
+
+            ###???does this init scheme actually help???
+            #self.init_weights()
             if self.attention != None:
+                ### here, input == hidden, guaranteed
                 self.att_layer = nn.Linear(2*self.hidden_size, self.input_size) 
         
         else:
@@ -208,15 +235,16 @@ class Decoder(nn.Module):
             #self.projectToV = nn.Linear(self.hidden_size, self.input_size)
             self.projectToV = nn.Linear(self.hidden_size, self.vocab_size) 
  
-            self.trg_embeddings.weight.data.uniform_(-.1, .1)
+            ###???does this init scheme actually help???
+            #self.trg_embeddings.weight.data.uniform_(-.1, .1)
             if self.attention != None:
                 self.att_layer = nn.Linear(2*self.hidden_size, self.hidden_size) 
         
     #!!!new init scheme and WT
-    def init_weights(self):
-        initrange = 0.1
-        self.trg_embeddings.weight.data.uniform_(-initrange, initrange)
-        self.projectToV.bias.data.zero_()
+    # def init_weights(self):
+    #     initrange = 0.1
+    #     self.trg_embeddings.weight.data.uniform_(-initrange, initrange)
+    #     self.projectToV.bias.data.zero_()
         
 
 
@@ -239,6 +267,7 @@ class Decoder(nn.Module):
 
             trgEmbeddings = self.trg_embeddings(decoder_inputs_tensor) # 3D tensor of shape (bsz x max_len x input_size)
             
+            ###???why isnt it already packed up ahead of time???
             packed_input = pack_padded_sequence(trgEmbeddings, trg_lengths, batch_first=True)
 
             # packed_input is a tuple, whose first comp is the packed sequence, and second comp is "batchsizes",
@@ -255,6 +284,7 @@ class Decoder(nn.Module):
 
 
         # Let q be total length of all trg seqs of the batch. then packed_decoder_states is 2D tensor of shape (q x hs)
+        ###!!!change to 'if self.attention:'
         if self.attention != None:
             # convert states to attentional states before projecting
             decoder_states, _ = pad_packed_sequence(packed_output, batch_first=True)

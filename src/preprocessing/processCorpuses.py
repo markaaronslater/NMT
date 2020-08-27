@@ -14,7 +14,7 @@ import re
 import string
 ##### Performs all preprocessing and stores results in series of files that are directly loaded by encoderdecoder
 
-# # pass path to toy corpuses
+# pass path to toy corpuses
 # def load_docs(path, bpe=False, tok=False, decased=False):
 #     prefix = ''
 #     infix = ''
