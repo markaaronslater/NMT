@@ -14,7 +14,7 @@ import re
 import string
 ##### Performs all preprocessing and stores results in series of files that are directly loaded by encoderdecoder
 
-# pass path to toy corpuses
+# # pass path to toy corpuses
 # def load_docs(path, bpe=False, tok=False, decased=False):
 #     prefix = ''
 #     infix = ''
@@ -58,7 +58,8 @@ import string
 
 
 # load the corpus files into strings and then converts each into list of sentences
-def load_docs(path, bpe=False, tok=False, decased=False):
+# corpuses is a dictionary where the keys are file names, and the values are None. afterward, the values are the string form of their text
+def load_docs(path, corpuses, bpe=False, tok=False, decased=False):
     prefix = ''
     infix = ''
 
@@ -69,40 +70,61 @@ def load_docs(path, bpe=False, tok=False, decased=False):
     elif decased:
         prefix = 'decased_'
 
-    train_srcFile = prefix + 'train' + infix + '.de'
-    train_trgFile = prefix + 'train' + infix + '.en'
-    dev_srcFile = prefix + 'dev' + infix + '.de'
-    dev_trgFile = prefix + 'dev' + infix + '.en'
-    test_srcFile = prefix + 'test' + infix + '.de'
+    # train_srcFile = prefix + 'train' + infix + '.de'
+    # train_trgFile = prefix + 'train' + infix + '.en'
+    # dev_srcFile = prefix + 'dev' + infix + '.de'
+    # dev_trgFile = prefix + 'dev' + infix + '.en'
+    # test_srcFile = prefix + 'test' + infix + '.de'
 
             
-    with open(path + train_srcFile, mode='rt', encoding='utf-8') as f:
-        train_srctext = f.read()
+    for corpus_name in corpuses:
+        with open(path + prefix + corpus_name, mode='rt', encoding='utf-8') as f:
+            corpuses[corpus_name] = f.read().strip()
+            if corpuses[corpus_name]: 
+                corpuses[corpus_name] = corpuses[corpus_name].split('\n')
+            else:
+                corpuses[corpus_name] = [] # f was empty
 
-    with open(path + train_trgFile, mode='rt', encoding='utf-8') as f:
-        train_trgtext = f.read()
+            # reads corpus as one big string, then converts to list of lines (string-forms of sentences)
 
-    with open(path + dev_srcFile, mode='rt', encoding='utf-8') as f:
-        dev_srctext = f.read()
+    # dict is passed by value, so dn need to return corpuses
 
-    with open(path + dev_trgFile, mode='rt', encoding='utf-8') as f:
-        dev_trgtext = f.read()
+
+
+
+    # with open(path + train_srcFile, mode='rt', encoding='utf-8') as f:
+    #     train_srctext = f.read()
+
+    # with open(path + train_trgFile, mode='rt', encoding='utf-8') as f:
+    #     train_trgtext = f.read()
+
+    # with open(path + dev_srcFile, mode='rt', encoding='utf-8') as f:
+    #     dev_srctext = f.read()
+
+    # with open(path + dev_trgFile, mode='rt', encoding='utf-8') as f:
+    #     dev_trgtext = f.read()
     
-    with open(path + test_srcFile, mode='rt', encoding='utf-8') as f:
-        test_srctext = f.read()
+    # with open(path + test_srcFile, mode='rt', encoding='utf-8') as f:
+    #     test_srctext = f.read()
 
-    texts = to_sentences([train_srctext, train_trgtext, dev_srctext, dev_trgtext, test_srctext])
-    return texts
-
-
-# pass a list of texts, and produces list of lists of str(sentences)
-def to_sentences(texts):
-    return [text.strip().split('\n') for text in texts]
-    #return [text.split('\n') for text in texts] # for debug, allow empty sent
+    # texts = to_sentences([train_srctext, train_trgtext, dev_srctext, dev_trgtext, test_srctext])
+    # return texts
 
 
+# # pass a list of texts, and produces list of lists of str(sentences)
+# def to_sentences(texts):
+#     return [text.strip().split('\n') for text in texts]
+#     #return [text.split('\n') for text in texts] # for debug, allow empty sent
 
 
+# print out first 10 sentences of each corpus
+def print_corpuses(corpuses):
+    for corpus_name in corpuses:
+        corpus = corpuses[corpus_name]
+        for sent in corpus[:10]:
+            print(sent)
+        print()
+    
 
 
 
@@ -154,53 +176,81 @@ acronyms = re.compile(r'(Mr|Mrs|Dr|Ms|etc|ca|St|Mt|Lt)\s\.')
 
 
 
-def normalizeCorpuses(path):
-    texts = load_docs(path)
+def normalizeCorpuses(path, corpuses):
+    #load_docs(path, corpuses)
     # print("texts:")
     # print(texts)
     # print()
     # stage 0-remove songs and sentences over 100 words in length from train sets
-    texts[0], texts[1] = filterSentences(texts[0], texts[1])
+    #texts[0], texts[1] = filterSentences(texts[0], texts[1])
+    
+    ###!!!fix this with iwslt-en-de2
+    #filterSentences(corpuses)
+
+
 
     # stage 1-tokenize corpuses -> produces references. for De -> En, only 
     # necessary for train_trg (when debugging new nets, i.e., overfitting 
     # to trainset) and dev_trg (when estimating model's translation ability
     # after finish an epoch)
-    tok_texts = tokenizeCorpuses(texts, path)
+    #tok_texts = tokenizeCorpuses(path, corpuses)
+    tokenizeCorpuses(path, corpuses)
+
+
+
     # print("tok_texts:")
     # print(tok_texts)
     # print()
     # stage 2-create names tables -> produces dictionaries of words that 
     # should not be lowercased
-    de_namesTable, _ = createNamesTable(path, "names.de", tok_texts[0][:])
-    en_namesTable, _ = createNamesTable(path, "names.en", tok_texts[1][:])
+    #de_namesTable, _ = createNamesTable(path, "names.de", tok_texts[0][:])
+    #en_namesTable, _ = createNamesTable(path, "names.en", tok_texts[1][:])
 
     # stage 3-decase corpuses -> produces training corpuses. for De -> En, only 
     # necessary for train_src, train_trg, dev_src and test_src
     ### ???wait, why did i do this for the dev and test source sentences, too. isnt that cheating???
-    decased_texts = decaseCorpuses(tok_texts, path, de_namesTable, en_namesTable)
+    #decased_texts = decaseCorpuses(tok_texts, path, de_namesTable, en_namesTable)
     # print("decased_texts:")
     # print(decased_texts)
     # print()
-    return decased_texts
+    #return decased_texts
 
-def tokenizeCorpuses(corpuses, path):
-    corpus_names = ["train.de", "train.en", "dev.de", "dev.en", "test.de"]
-    #corpus_names = ["train.de", "train.en"]
+def tokenizeCorpuses(path, corpuses):
+    # corpus_names = ["train.de", "train.en", "dev.de", "dev.en", "test.de"]
+    # #corpus_names = ["train.de", "train.en"]
 
-    tok_corpuses = []
-    for corpus_idx, corpus in enumerate(corpuses):
-        tok_corpus = []
-        corpus_name = corpus_names[corpus_idx]
+    for corpus_name in corpuses:
+        corpus = corpuses[corpus_name]
         with open(path + "tok_" + corpus_name, "w") as f:
             print("tokenizing " + corpus_name + "...")
-            for sent in corpus:
-                sent = naiveTokenize(sent)
-                tok_corpus.append(sent)
-                f.write(sent + '\n') #!!! this is why references diff length than trgs, bc adding a newline
-            tok_corpuses.append(tok_corpus)
+            #tok_corpus = []
+            for i, sent in enumerate(corpus):
+                # replace with tokenized version
+                corpus[i] = naiveTokenize(sent)
+                #tok_corpus.append(sent)
+                #f.write(sent + '\n') #!!! this is why references diff length than trgs, bc adding a newline
+                #???maybe convert to fencepost alg, where write first sent, then '\n' + sent for each remaining sentence???
 
-    return tok_corpuses
+                ###!!!should do join, not string concat
+                ###for now, do this compromise:
+                f.write(sent)
+                f.write('\n')
+
+    # tok_corpuses = []
+    # for corpus_idx, corpus in enumerate(corpuses):
+    #     tok_corpus = []
+    #     corpus_name = corpus_names[corpus_idx]
+    #     with open(path + "tok_" + corpus_name, "w") as f:
+    #         print("tokenizing " + corpus_name + "...")
+    #         for sent in corpus:
+    #             sent = naiveTokenize(sent)
+    #             tok_corpus.append(sent)
+    #             f.write(sent + '\n') #!!! this is why references diff length than trgs, bc adding a newline
+    #             #???maybe convert to fencepost alg, where write first sent, then '\n' + sent for each remaining sentence???
+
+    #         tok_corpuses.append(tok_corpus)
+
+    #return tok_corpuses
 
 
 def decaseCorpuses(corpuses, path, de_namesTable, en_namesTable):
@@ -285,10 +335,11 @@ def naiveRecase(sent):
     if not sent:
         return sent # for debugging empty sentence
 
-    try:
-        sent[0] = sent[0].capitalize()
-    except AttributeError:
-        print(sent)
+    sent[0] = sent[0].capitalize()
+    # try:
+    #     sent[0] = sent[0].capitalize()
+    # except AttributeError:
+    #     print(sent)
         
     eosPositions = [i for i,word in enumerate(sent) if word in eos and i != len(sent)-1]
     quotePositions = [i for i,word in enumerate(sent) if word == '"' and i != len(sent)-1]
@@ -353,7 +404,9 @@ def formatPrediction(sent):
 
 # remove songs; 
 # remove any pair where at least one of the sentences is over length 100
-def filterSentences(src_sentences, trg_sentences):
+#def filterSentences(src_sentences, trg_sentences):
+def filterSentences(corpuses):
+
     filtered_src_sentences = []
     filtered_trg_sentences = []
 
@@ -437,16 +490,20 @@ def createNamesTable(path, namesFile, train_sentences): # list of str(sentence)'
 
 
 # determine the frequencies of words in the src and trg corpuses
-def to_counters(src_sentences, trg_sentences):
+#def to_counters(src_sentences, trg_sentences):
+def to_counters(corpuses):
+
     src_counter = Counter()
-    for src_sentence in src_sentences:
+    for src_sentence in corpuses["train.de"]:
         src_counter.update(src_sentence)
 
     trg_counter = Counter()
-    for trg_sentence in trg_sentences:
+    for trg_sentence in corpuses["train.en"]:
         trg_counter.update(trg_sentence)
 
-    print("lengths of vocabs before trimming: src: %d, trg: %d" % (len(src_counter.items()), len(trg_counter.items())))
+    print("lengths of vocabs before trimming:", end=" ")
+    print(f"src: {len(src_counter.items())}, trg: {len(trg_counter.items())}")
+    
     return src_counter, trg_counter
 
 
@@ -463,8 +520,13 @@ def trim_vocabs2(src_counter, trg_counter, srcK=10000, trgK=10000):
     topKtrgwords = [word for word, count in topKtrgwordcountpairs]
     trimmed_trg_vocab = set(topKtrgwords)
 
-    print("lengths of vocabs after trimming: src: %d, trg: %d" % (len(trimmed_src_vocab), len(trimmed_trg_vocab)))
+
+    print("lengths of vocabs after trimming:", end=" ")
+    print(f"src: {len(trimmed_src_vocab)}, trg: {len(trimmed_trg_vocab)}")
+    print()
+
     return trimmed_src_vocab, trimmed_trg_vocab
+
 
 
 
@@ -481,14 +543,34 @@ def trim_vocabs(src_counter, trg_counter, srcThres=2, trgThres=2):
 
 
 
+def replace_with_unk_tokens(corpuses, trimmed_src_vocab, trimmed_trg_vocab):
+    # for corpus_name in corpuses:
+    #     # do not replace dev targets with unk (would be cheating)
+    #     if corpus_name == "dev.en":
+    #         continue
+    #     corpus = corpuses[corpus_name]
+    #     if corpus:
+            
+    removeOOV(corpuses["train.de"], trimmed_src_vocab)    
+    removeOOV(corpuses["train.en"], trimmed_trg_vocab)
+    # next 2 are no-ops if these corpuses dne (e.g., when debugging):    
+    removeOOV(corpuses["dev.de"], trimmed_src_vocab)  
+    # do not replace dev targets with unk (would be cheating)  
+    removeOOV(corpuses["test.de"], trimmed_src_vocab)
+
+
+
 # src_sentences is a list of lists of str(word)'s
 def removeOOV(sentences, trimmed_vocab):
-    new_sentences = []
-    for sent in sentences:
-        new_sent = [token if token in trimmed_vocab else '<unk>' for token in sent]
-        new_sentences.append(new_sent)
-        
-    return new_sentences
+    # new_sentences = []
+    # for sent in sentences:
+    #     new_sent = [token if token in trimmed_vocab else '<unk>' for token in sent]
+    #     new_sentences.append(new_sent)
+
+    for i, sent in enumerate(sentences):
+        sentences[i] = [token if token in trimmed_vocab else '<unk>' for token in sent]
+
+    #return new_sentences
 
     
 
@@ -498,10 +580,9 @@ def removeOOV(sentences, trimmed_vocab):
 
 # prepend and append trg sentences with start-of-sentence token, <sos>, and end-of-sentence token, <eos>, respectively
 # trg_sentences is a list of lists of str(word)'s
-def add_start_end_tokens(trg_sentences):
+def add_start_end_tokens(corpuses):
     ###???is this list concat a constant time op??? is it creating a copy???
-    return [['<sos>'] + sent + ['<eos>'] for sent in trg_sentences]
-    
+    corpuses["train.en"] = [['<sos>'] + sent + ['<eos>'] for sent in corpuses["train.en"]]
 
 
 
@@ -513,25 +594,29 @@ def add_start_end_tokens(trg_sentences):
 # for convenience, use diff values for tokens when working with synthetic data
 # (single ch's x, p, q, and u instead of <pad>, <sos>, <eos>, and <unk>, respectively), 
 # for convenience in reading the predictions
-def computeVocabs(src_sentences, trg_sentences):
-    srcV = {'<pad>':0, '<unk>':1}
-    trgV = {'<pad>':0, '<unk>':1, '<sos>':2, '<eos>':3} # only trg sentences have sos and eos tokens
+def computeVocabs(vocabs, src_sentences, trg_sentences):
+    srcV = vocabs["srcV"]
+    trgV = vocabs["trgV"]
 
     for sent in src_sentences:
         for word in sent:
             if word not in srcV:
                 srcV[word] = len(srcV)
 
-    idx_to_src_word = dict((v,k) for (k,v) in srcV.items())
+    #vocabs["idx_to_src_word"] = dict((v,k) for (k,v) in srcV.items())
+    vocabs["idx_to_src_word"] = {srcV[key]:key for key in srcV}
+
+
 
     for sent in trg_sentences:
         for word in sent:
             if word not in trgV:
                 trgV[word] = len(trgV)
     
-    idx_to_trg_word = dict((v,k) for (k,v) in trgV.items())
+    #idx_to_trg_word = dict((v,k) for (k,v) in trgV.items())
+    vocabs["idx_to_trg_word"] = {trgV[key]:key for key in trgV}
 
-    return srcV, trgV, idx_to_src_word, idx_to_trg_word
+    #return srcV, trgV, idx_to_src_word, idx_to_trg_word
 
 
 
@@ -565,52 +650,75 @@ def computeBPEvocabs(src_vocab_file, trg_vocab_file):
     return vocab, idx_to_subword
 
 
-def toIndices(sentences, vocab):
-    idx_sentences = []
-    for sent in sentences:
-        # try:
-        #     idx_sent = [vocab[word] for word in sent]
-        # except KeyError:
-        #     print("error: {} contains unknown word".format(sent))
 
-        idx_sent = []
+
+def replace_with_indices(corpuses, vocabs):
+    train_src_sentences = toIndices(corpuses["train.de"], vocabs["srcV"])
+    train_trg_sentences = toIndices(corpuses["train.en"], vocabs["trgV"])
+    dev_src_sentences = toIndices(corpuses["dev.de"], vocabs["srcV"])   
+    test_src_sentences = toIndices(corpuses["test.de"], vocabs["trgV"])
+
+
+def toIndices(sentences, vocab):
+    # idx_sentences = []
+    # for sent in sentences:
+    #     # try:
+    #     #     idx_sent = [vocab[word] for word in sent]
+    #     # except KeyError:
+    #     #     print("error: {} contains unknown word".format(sent))
+
+    #     idx_sent = []
+    #     for word in sent:
+    #         try:
+    #             idx_sent.append(vocab[word])
+    #         except KeyError:
+    #             ### not quite sure why this happens. maybe some sort of quirk in the subword-nmt script. i'll figure it out later.
+    #             # one clue is that they all seem to be special unicode ch's. maybe i am not using proper encoding scheme.
+    #             print(f"warning: found and removed unknown word: {word} in sent: {sent}")
+    #             print()
+    #     idx_sentences.append(idx_sent)
+
+    # return idx_sentences
+
+
+
+    idx_sentences = []
+    for i, sent in enumerate(sentences):
+        new_sent = [] # contains corresponding indices of sent
         for word in sent:
             try:
-                idx_sent.append(vocab[word])
+                new_sent.append(vocab[word])
             except KeyError:
                 ### not quite sure why this happens. maybe some sort of quirk in the subword-nmt script. i'll figure it out later.
                 # one clue is that they all seem to be special unicode ch's. maybe i am not using proper encoding scheme.
-                print("warning: unknown word: {} in sent: {}".format(word, sent))
-                print("removed it from the sentence.")
+                print(f"warning: found and removed unknown word: {word} in sent: {sent}")
                 print()
-        idx_sentences.append(idx_sent)
-
-    return idx_sentences
+        sentences[i] = new_sent
 
 
 
 ###???do i even use this???
 # assuming all parameters contain normalized sentences, creates normalized corpus counterparts in file form to be processed by learnBPE
-def normalizeFiles(path, train_src_sentences, train_trg_sentences, dev_src_sentences, dev_trg_sentences, test_src_sentences):
-    with open(path + "norm_train.de", "w") as f:
-        for sent in train_src_sentences:
-            f.write(' '.join(sent) + '\n')
+# def normalizeFiles(path, train_src_sentences, train_trg_sentences, dev_src_sentences, dev_trg_sentences, test_src_sentences):
+#     with open(path + "norm_train.de", "w") as f:
+#         for sent in train_src_sentences:
+#             f.write(' '.join(sent) + '\n')
    
-    with open(path + "norm_train.en", "w") as f:
-        for sent in train_trg_sentences:
-            f.write(' '.join(sent) + '\n')
+#     with open(path + "norm_train.en", "w") as f:
+#         for sent in train_trg_sentences:
+#             f.write(' '.join(sent) + '\n')
    
-    with open(path + "norm_dev.de", "w") as f:
-        for sent in dev_src_sentences:
-            f.write(' '.join(sent) + '\n')
+#     with open(path + "norm_dev.de", "w") as f:
+#         for sent in dev_src_sentences:
+#             f.write(' '.join(sent) + '\n')
    
-    with open(path + "norm_dev.en", "w") as f:
-        for sent in dev_trg_sentences:
-            f.write(' '.join(sent) + '\n')
+#     with open(path + "norm_dev.en", "w") as f:
+#         for sent in dev_trg_sentences:
+#             f.write(' '.join(sent) + '\n')
    
-    with open(path + "norm_test.de", "w") as f:
-        for sent in test_src_sentences:
-            f.write(' '.join(sent) + '\n')
+#     with open(path + "norm_test.de", "w") as f:
+#         for sent in test_src_sentences:
+#             f.write(' '.join(sent) + '\n')
    
 
 
