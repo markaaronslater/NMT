@@ -653,10 +653,10 @@ def computeBPEvocabs(src_vocab_file, trg_vocab_file):
 
 
 def replace_with_indices(corpuses, vocabs):
-    train_src_sentences = toIndices(corpuses["train.de"], vocabs["srcV"])
-    train_trg_sentences = toIndices(corpuses["train.en"], vocabs["trgV"])
-    dev_src_sentences = toIndices(corpuses["dev.de"], vocabs["srcV"])   
-    test_src_sentences = toIndices(corpuses["test.de"], vocabs["trgV"])
+    toIndices(corpuses["train.de"], vocabs["srcV"])
+    toIndices(corpuses["train.en"], vocabs["trgV"])
+    toIndices(corpuses["dev.de"], vocabs["srcV"])   
+    toIndices(corpuses["test.de"], vocabs["srcV"])
 
 
 def toIndices(sentences, vocab):
