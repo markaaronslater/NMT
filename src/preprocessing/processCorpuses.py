@@ -233,7 +233,7 @@ def tokenizeCorpuses(path, corpuses):
 
                 ###!!!should do join, not string concat
                 ###for now, do this compromise:
-                f.write(sent)
+                f.write(corpus[i])
                 f.write('\n')
 
     # tok_corpuses = []
