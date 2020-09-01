@@ -73,7 +73,9 @@ def getBatch(batch_PairSentIndices, dev):
 
 
     # -> rename src_lengths to correspond:
-    src_lengths = sorted_src_lengths
+    ###!!!moved below
+    #src_lengths = sorted_src_lengths
+
     # idxs_in_sorted_enc_inputs_tensor holds, at position i, the index within sorted_enc_inputs_tensor
     # of the ith tensor in encoder_inputs_tensor
     # (in ASCENDING order)
@@ -92,9 +94,8 @@ def getBatch(batch_PairSentIndices, dev):
 
     mask = mask.view(bsz, 1, max_src_len).expand(bsz, max_trg_len, max_src_len)
     
-    
-    
-    encoder_inputs_batch = (encoder_inputs_tensor, src_lengths, idxs_in_sorted_enc_inputs_tensor)
+    ###!!!pass sorted_src_lengths, not renamed src_lengths
+    encoder_inputs_batch = (encoder_inputs_tensor, sorted_src_lengths, idxs_in_sorted_enc_inputs_tensor)
     targets_batch = (target_indices_tensor, trg_lengths)
 
     decoder_inputs_batch = (decoder_inputs_tensor, trg_lengths, mask)
