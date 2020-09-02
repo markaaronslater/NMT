@@ -66,7 +66,7 @@ def normalizeCorpuses(path, corpuses):
     
     ###!!!fix this with iwslt-en-de2
     #filterSentences(corpuses)
-
+    filter_corpuses(corpuses)
 
 
     # stage 1-tokenize corpuses -> produces references. for De -> En, only 
@@ -74,7 +74,7 @@ def normalizeCorpuses(path, corpuses):
     # to trainset) and dev_trg (when estimating model's translation ability
     # after finish an epoch)
     #tok_texts = tokenizeCorpuses(path, corpuses)
-    tokenizeCorpuses(path, corpuses)
+    tokenize_corpuses(path, corpuses)
 
 
 
@@ -118,55 +118,6 @@ def normalizeCorpuses(path, corpuses):
 
 
 
-def createNamesTable(path, namesFile, train_sentences): # list of str(sentence)'s
-    namesTable = Counter() # names/proper nouns map to their frequency in corpus, everything else maps to 0
-    lower_train_sentences = []
-    print("creating " + namesFile[-2:] + " names table...")
-    # get vocab counter for num capitalized occurrences of words
-    capWords = Counter()
-    for sent in train_sentences:
-        lower_train_sent = []
-        tokens = sent.split()
-        for word in tokens:
-            if word[0].isupper():
-                capWords[word] += 1
-                #print(capWords)
-            lower_train_sent.append(word.lower())
-        lower_train_sentences.append(lower_train_sent)
-
-    #print(lower_train_sentences)
-    allWords = Counter()
-    # get vocab counter for total occurrences of words 
-    # (both capitalized and lowercase)
-    for sent in lower_train_sentences:
-        for word in sent:
-            allWords[word] += 1
-
-    for word in capWords:
-        #print(word)
-        if allWords[word.lower()] == capWords[word]:
-            # num times ever occurred == num times occurred in capitalized form,
-            # so assume it is a name or proper noun 
-            namesTable[word] = capWords[word]
-        
-    # want to track all words that should not be decased in namesTable,
-    # so include certain acronyms like Mr.,
-    # and fix bug where corpus had a few occurrences of i and i'm
-
-    ### ???why am i not also including I've, I'd, I'll, etc., here??
-    namesTable["I"] = 1
-    namesTable["I'm"] = 1
-    acList = ["Mr.", "Mrs.", "Dr.", "Ms.", "St.", "Mt.", "Lt."] # do not decase these
-    for ac in acList:
-        namesTable[ac] = 1
-
-    with open(path + namesFile, 'w') as f:
-        for name, count in sorted(namesTable.items(), key=lambda item: item[1], reverse=True):
-            f.write("{} {}\n".format(name, count))
-
-    return namesTable, len(namesTable)
-
-
 
 
 
@@ -182,43 +133,20 @@ def str_to_list(corpuses, ref=False):
             corpus[i] = sent.split() if not ref else [sent.split()]
 
 
-
-
-
-
-
+# prepend and append trg sentences with start-of-sentence token, <sos>, and end-of-sentence token, <eos>, respectively
+def add_start_end_tokens(corpuses):
+    ###???is this list concat a constant time op??? is it creating a copy???
+    corpuses["train.en"] = [['<sos>'] + sent + ['<eos>'] for sent in corpuses["train.en"]]
 
 
 def replace_with_indices(corpuses, vocabs):
-    toIndices(corpuses["train.de"], vocabs["srcV"])
-    toIndices(corpuses["train.en"], vocabs["trgV"])
-    toIndices(corpuses["dev.de"], vocabs["srcV"])   
-    toIndices(corpuses["test.de"], vocabs["srcV"])
+    to_indices(corpuses["train.de"], vocabs["srcV"])
+    to_indices(corpuses["train.en"], vocabs["trgV"])
+    to_indices(corpuses["dev.de"], vocabs["srcV"])   
+    to_indices(corpuses["test.de"], vocabs["srcV"])
 
 
-def toIndices(sentences, vocab):
-    # idx_sentences = []
-    # for sent in sentences:
-    #     # try:
-    #     #     idx_sent = [vocab[word] for word in sent]
-    #     # except KeyError:
-    #     #     print("error: {} contains unknown word".format(sent))
-
-    #     idx_sent = []
-    #     for word in sent:
-    #         try:
-    #             idx_sent.append(vocab[word])
-    #         except KeyError:
-    #             ### not quite sure why this happens. maybe some sort of quirk in the subword-nmt script. i'll figure it out later.
-    #             # one clue is that they all seem to be special unicode ch's. maybe i am not using proper encoding scheme.
-    #             print(f"warning: found and removed unknown word: {word} in sent: {sent}")
-    #             print()
-    #     idx_sentences.append(idx_sent)
-
-    # return idx_sentences
-
-
-
+def to_indices(sentences, vocab):
     idx_sentences = []
     for i, sent in enumerate(sentences):
         new_sent = [] # contains corresponding indices of sent
