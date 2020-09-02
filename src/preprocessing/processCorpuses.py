@@ -487,6 +487,17 @@ def createNamesTable(path, namesFile, train_sentences): # list of str(sentence)'
 
 
 
+# for typical corpuses, e.g., train and dev sets, converts a list of sentences as strings into a list of sentences as lists of words
+# list of str(sentence)'s to list of lists of words.
+
+# for reference corpuses (used by corpus_bleu evaluation), converts a list of sentences as strings into a list of reference sets, where a reference set is a  list of acceptable translations for the corresponding source , where a translation is a list of words of the target sentence.
+# (in this project, there will always be a single reference translation for each source sentence, so each reference set is a singleton list)
+def str_to_list(corpuses, ref=False):
+    for corpus_name in corpuses:
+        corpus = corpuses[corpus_name]
+        for i, sent in enumerate(corpus):
+            corpus[i] = sent.split() if not ref else [sent.split()]
+
 
 
 # determine the frequencies of words in the src and trg corpuses
