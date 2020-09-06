@@ -77,10 +77,13 @@ def normalizeCorpuses(path, corpuses):
     tokenize_corpuses(path, corpuses)
 
 
+    # stage 1.5. converts each corpus from a list of str(sentence)'s to a list of lists of words
+    str_to_list(corpuses, ref=False)
+    
 
-    # print("tok_texts:")
-    # print(tok_texts)
-    # print()
+
+
+
     # stage 2-create names tables -> produces dictionaries of words that 
     # should not be lowercased
     #de_namesTable, _ = createNamesTable(path, "names.de", tok_texts[0][:])
