@@ -154,17 +154,22 @@ def load_corpuses(filename):
 # Document object consists of one or more Sentence objects. (in case a src or trg sentence of the corpus is actually more than one sentence)
 
 def decase_all_corpuses(all_corpuses, num=5):
-    decase_corpuses(all_corpuses["src"], num)    
-    decase_corpuses(all_corpuses["trg"], num)
+    decase_german_corpuses(all_corpuses["src"], num)    
+    decase_english_corpuses(all_corpuses["trg"], num)
 
 
-def decase_corpuses(corpuses, num=5):
+def decase_german_corpuses(corpuses, num=5):
     for corpus in corpuses:
-        decase(corpuses[corpus], num)
+        german_decase(corpuses[corpus], num)
+
+
+def decase_english_corpuses(corpuses, num=5):
+    for corpus in corpuses:
+        english_decase(corpuses[corpus], num)
 
 
 # decase all words at cap_locations unless they are proper nouns, or are the pronoun 'I'.
-def decase(corpus, num=5):
+def english_decase(corpus, num=5):
     #print(corpus[:num])
     for doc in corpus[:num]:
         for sent in doc.sentences:
@@ -197,3 +202,41 @@ def decase(corpus, num=5):
                             sent.words[i].text = word.text.lower()
                     #print(i, sent.words[i].text)
                     #print()
+
+
+# decase all words at cap_locations unless they are proper nouns or common nouns, or are the pronoun 'I'.
+# TODO: find better heuristic than this for distinguishing 'she/it' from 'they' from 'You':
+# if 'Sie' is at cap_location, it could either be 'she/it/they/You', where 'You' is formal. stanfordnlp pos tagger trained on corpus that uses automated labeling of number, plural, and gender, so treats every instance of 'Sie' as if it were 3rd person plural, with no gender. therefore, cannot use that info to distinguish 'You' (which should not be lower cased) from 'they', (which should be lower cased). however, if means 'she/it', then will be singular, feminine, so could use that info to at least properly decase those senses.
+def german_decase(corpus, num=5):
+    for doc in corpus[:num]:
+        for sent in doc.sentences:
+            cap_prefixes = ['"', ':']
+            for i, word in enumerate(sent.words):
+                if i == 0:
+                    # first word always at a cap_location, so handle separately
+                    word = sent.words[0]
+                    #print(i, word.text)
+                    if word.upos == 'PRON':
+                        if word.text != 'Sie' or (word.text == 'Sie' and "Gender=Fem" in word.feats):
+                            sent.words[0].text = word.text.lower()
+                    elif word.upos != 'PROPN' and word.upos != 'NOUN':
+                        sent.words[0].text = word.text.lower()
+                    #print(i, sent.words[0].text)
+                    #print()
+                else:
+                    #print(i, sent.words[i].text)
+                    prev_word = sent.words[i-1]
+                    if prev_word.text in cap_prefixes:
+                        if word.upos == 'PRON':
+                            if word.text != 'Sie' or (word.text == 'Sie' and "Gender=Fem" in word.feats):
+                                sent.words[i].text = word.text.lower()
+                        elif word.upos != 'PROPN' and word.upos != 'NOUN':
+                            sent.words[i].text = word.text.lower()
+                    #print(i, sent.words[i].text)
+                    #print()
+        #print(sent)
+
+
+
+def test_german_decase(src_processor):
+    german_decase([src_processor('Sie haben etwas namens RNA.')], num=1)
