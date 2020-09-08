@@ -1,114 +1,59 @@
 #import stanza
 from pickle import load, dump
+from math import ceil
 
-# get pos tags for each word of the corpuses
-# each corpus is a list of str(sentence)'s
-# afterward, each str(sentence) is replaced by a Document object corresponding to that sentence
-
-
-src_corpuses = {"train.de":'', "dev.de":'', "test.de":''}
-trg_corpuses = {"train.en":'', "dev.en":''}
-all_corpuses = {"src":src_corpuses, "trg":trg_corpuses}
-
-
-def load_docs2(path, all_corpuses):
-    for corpus_name in all_corpuses["src"]:
+#corpus_types = {""}
+# pass arbitrary number of positional arguments. will load each of them into dict entry with their name and return the dict
+# if num is not None, then will only load the first num lines of each corpus
+def load_docs3(path, *corpus_names, num=None):
+    corpuses = {}
+    for corpus_name in corpus_names:
         with open(path + corpus_name, mode='rt', encoding='utf-8') as f:
-            all_corpuses["src"][corpus_name] = f.read().strip()
-            if all_corpuses["src"][corpus_name]: 
-                all_corpuses["src"][corpus_name] = all_corpuses["src"][corpus_name].split('\n')
-            else:
-                all_corpuses["src"][corpus_name] = [] # f was empty (used for debugging)
-
-    for corpus_name in all_corpuses["trg"]:
-        with open(path + corpus_name, mode='rt', encoding='utf-8') as f:
-            all_corpuses["trg"][corpus_name] = f.read().strip()
-            if all_corpuses["trg"][corpus_name]: 
-                all_corpuses["trg"][corpus_name] = all_corpuses["trg"][corpus_name].split('\n')
-            else:
-                all_corpuses["trg"][corpus_name] = [] # f was empty (used for debugging)
-    
-
-# map a source sentence to its line number in its corpus (1-based idxing).
-# map a target sentence to its line number in its corpus.
-# vice versa
-
-# map a source sentence to its corresponding target sentence.
-# vice versa
-def create_lookup_tables(all_corpuses):
-    sent_to_line = {"train.en":{}, "dev.en":{}, "train.de":{}, "dev.de":{}}
-    line_to_sent = {"train.en":{}, "dev.en":{}, "train.de":{}, "dev.de":{}}
-
-    for i, (src_sentence, trg_sentence) in enumerate(zip(all_corpuses["src"]["train.de"], all_corpuses["trg"]["train.en"])):
-        sent_to_line["train.de"][src_sentence] = i+1 # 1-based indexing
-        sent_to_line["train.en"][trg_sentence] = i+1 # 1-based indexing
-
-        line_to_sent["train.de"][i+1] = src_sentence
-        line_to_sent["train.en"][i+1] = trg_sentence
-
-    for i, (src_sentence, trg_sentence) in enumerate(zip(all_corpuses["src"]["dev.de"], all_corpuses["trg"]["dev.en"])):
-        sent_to_line["dev.de"][src_sentence] = i+1 # 1-based indexing
-        sent_to_line["dev.en"][trg_sentence] = i+1 # 1-based indexing
-
-        line_to_sent["dev.de"][i+1] = src_sentence
-        line_to_sent["dev.en"][i+1] = trg_sentence
-
-    return  {   "sent_to_line":sent_to_line, 
-                "line_to_sent":line_to_sent
-            }
+            corpuses[corpus_name] = f.read().strip().split('\n')
+            if num is not None:
+                # only keep the first <num> sentences of the corpus
+                corpuses[corpus_name] = corpuses[corpus_name][:num]
+            
+    return corpuses
 
 
-#def print_lookup_tables(lookup_tables, start=1, num=5):
-    
-
-
-# returns lines <start> thru <start+num>, inclusive, of corpus <name>
-def get_sentences(lookup_tables, name, line_nums=[1,2,3,4,5]):
-    return [lookup_tables["line_to_sent"][name][line_num] for line_num in line_nums]
-
-
-# returns line number, inside <name>, of each sentence in list <sentences>
-def get_line_nums(lookup_tables, name, sentences):
-    return [lookup_tables["sent_to_line"][name][sent] for sent in sentences]
-
-
-# for each sentence in <sentences>, of corpus <name>, lookup the corresponding sentence in the opposite corpus
-def get_partners(lookup_tables, name, sentences):
-    # name of corresponding corpus, e.g., dev.de and dev.en are opposites
-    opp_name = name[:-2] + "de" if name[-2:] == "en" else name[:-2] + "en" 
-    line_nums = get_line_nums(lookup_tables, name, sentences)
-    return get_sentences(lookup_tables, opp_name, line_nums)
+# returns dict where each corpus_name maps to its number of sentences
+def corpus_lengths(corpuses):
+    return {corpus_name:len(corpuses[corpus_name]) for corpus_name in corpuses}
 
 
 
-# apply to each corpus of a given language (e.g., call twice: for src lang and trg lang)
-# tags, tokenizes, segments corpuses
-def apply_stanfordnlp_processor(corpuses, processor, num=5):
-    #nlp_en = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos')
+# tags, tokenizes, segments corpuses.
+# default piece_size is large enough that dev and test sets all fit inside single piece, but train sets will each get split into roughly 20 pieces.
+# corpus is a list of len(corpus) Document objects
+def apply_stanfordnlp_processor(corpus_name, corpus, processor, path='/content/gdrive/My Drive/iwslt16_en_de/', piece_size=10000):
+    for j in range(0, len(corpus), piece_size):
+        corpus_piece = corpus[j:j+piece_size] # list of piece_size Document objects
+        piece_number = j // piece_size + 1
+        file_name = f"{path}processed_{corpus_name}_{piece_number}"
+        print(f"processing piece {piece_number} of {corpus_name}...")
+        docs = [] # List[Document]
+        for sentence in corpus_piece:
+            docs.append(processor(sentence))
+
+        store_corpus(docs, file_name)
+
+
+
+
+def process_corpuses(corpuses, src_processor, trg_processor, path='/content/gdrive/My Drive/iwslt16_en_de/', piece_size=10000):
+
+    # first, store the number of pieces that will be associated with each corpus
+    num_corpus_pieces = {corpus_name:ceil(len(corpuses[corpus_name]) / piece_size) for corpus_name in corpuses}
+    print(f"pieces: {num_corpus_pieces}\n")
+    dump(num_corpus_pieces, open(path + 'num_corpus_pieces', 'wb'))
+
     for corpus_name in corpuses:
-        corpus = corpuses[corpus_name]
-        for i, sentence in enumerate(corpus[:num]):
-            corpus[i] = processor(sentence) # corpus[i] is now a Document object
+        if is_src_corpus(corpus_name):
+            apply_stanfordnlp_processor(corpus_name, corpuses[corpus_name], src_processor, path, piece_size)
+        else:
+            apply_stanfordnlp_processor(corpus_name, corpuses[corpus_name], trg_processor, path, piece_size)
 
-
-def process_corpuses(all_corpuses, src_processor, trg_processor, num=5):
-    apply_stanfordnlp_processor(all_corpuses["src"], src_processor, num)
-    apply_stanfordnlp_processor(all_corpuses["trg"], trg_processor, num)
-
-
-# print str(sentence)'s
-def print_corpuses2(all_corpuses, num=5):
-    for corpus_name in all_corpuses["src"]:
-        corpus = all_corpuses["src"][corpus_name]
-        for sent in corpus[:num]:
-            print(sent)
-        print()
-
-    for corpus_name in all_corpuses["trg"]:
-        corpus = all_corpuses["trg"][corpus_name]
-        for sent in corpus[:num]:
-            print(sent)
-        print()
 
 
 
@@ -124,26 +69,66 @@ def print_processed_corpus(corpus, num=5):
         print('\n\n')
     
 
-def print_processed_corpuses(all_corpuses, num=5):
-    for lang in all_corpuses:
-        lang_corpuses = all_corpuses[lang] # all corpuses of given language (src or trg)
-        for corpus_name in lang_corpuses:
-            corpus = lang_corpuses[corpus_name] # single corpus of given language
-            print_processed_corpus(corpus, num)
+def print_processed_corpuses(corpuses, num=5):
+    for corpus_name in corpuses:
+        print_processed_corpus(corpuses[corpus_name], num)
+
+
+# return true if is a source corpus, and false if is a target corpus
+def is_src_corpus(corpus_name, src_corpus_suffix="de"):
+    return corpus_name[-2:] == src_corpus_suffix
+
+
+
+
+# pass absolute path to filename to be saved to
+# corpus is a list of objects
+def store_corpus(corpus, path):
+    dump(corpus, open(path, 'wb'))
+    print(f"saved to {path}")
+    print()
+
+def load_corpus(path):
+    return load(open(path, 'rb'))
+
+
+
+
+def merge_corpus_pieces(corpus_name, num_pieces, path='/content/gdrive/My Drive/iwslt16_en_de/'):
+    merged_corpus = []
+    for i in range(1, num_pieces+1):
+        merged_corpus += load_corpus(f"{path}processed_{corpus_name}_{i}")
+
+    return merged_corpus
 
 
 
 
 
-# rather than re-running the tokenizer, segmenter, and pos_tagger on each corpus each time, just do so once, then store the corpuses (which now, rather than each being a list of str(sentence)'s, is now a list of Document objects). now, can  load them from pickle files
-def store_corpuses(corpuses, filename):
-    print('saving processed corpuses to pickle files...')
-    dump(corpuses, open(filename, 'wb'))
-    print('done.')
+def get_processed_corpuses(*corpuses, path='/content/gdrive/My Drive/iwslt16_en_de/'):
+    # get the number of pieces that each corpus is distributed across
+    num_corpus_pieces = load(open(path + 'num_corpus_pieces', 'rb'))
+    print(f"pieces: {num_corpus_pieces}\n")
+    processed_corpuses = {}
+    for corpus_name in corpuses:
+        processed_corpuses[corpus_name] = merge_corpus_pieces(corpus_name, num_corpus_pieces[corpus_name], path)
 
-def load_corpuses(filename):
-    print('loading processed corpuses...')
-    return load(open(filename, 'rb'))
+    return processed_corpuses
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -153,78 +138,70 @@ def load_corpuses(filename):
 # each sentence of the corpus corresponds to a Document object in stanza.
 # Document object consists of one or more Sentence objects. (in case a src or trg sentence of the corpus is actually more than one sentence)
 
-def decase_all_corpuses(all_corpuses, num=5):
-    decase_german_corpuses(all_corpuses["src"], num)    
-    decase_english_corpuses(all_corpuses["trg"], num)
+def decase_corpuses(corpuses, num=5):
+    decased_corpuses = {}
+    for corpus_name in corpuses:
+        if is_src_corpus(corpus_name):
+            decased_corpuses[corpus_name] = german_decase(corpuses[corpus_name], num)  
+        else:
+            decased_corpuses[corpus_name] = english_decase(corpuses[corpus_name], num)
+    
+
+    return decased_corpuses
 
 
-def decase_german_corpuses(corpuses, num=5):
-    for corpus in corpuses:
-        german_decase(corpuses[corpus], num)
 
-
-def decase_english_corpuses(corpuses, num=5):
-    for corpus in corpuses:
-        english_decase(corpuses[corpus], num)
-
-
+### NOTE: the following decase functions are tailored toward specific languages. when add support for translating other languages, will write specific decase functions for each of them
+### TODO: convert to closures, and have specific function "should_be_decased() that call rather than directly performing english or german specific check"
 # decase all words at cap_locations unless they are proper nouns, or are the pronoun 'I'.
+
+# after this stage, the pos and morphological data is no longer needed, so just returns the tokenized, decased corpus as List[List[Str]]
 def english_decase(corpus, num=5):
-    #print(corpus[:num])
+    decased_sentences = []
     for doc in corpus[:num]:
+        # build single sentence out of the potentially multiple sentences in the line
+        decased_sent = [] # List[Word]
         for sent in doc.sentences:
-            # print(sent.words)
-            # # handle first word of each sent separately, which is always a cap_location
-            # first_word = sent.words[0] # assumes each sent is non-
-            # print(0, first_word.text)
-            # if first_word.upos != 'PROPN' and first_word.text != 'I':
-            #     sent.words[0].text = first_word.text.lower()
-            # print(0, sent.words[0].text)
-            # print()
-            # remaining cap_locations include the sent position immediately after a double-quote or a colon (which I refer to as 'cap_location prefixes')
+            # cap_locations (other than beginning of sentence) include the sent position immediately after a double-quote or a colon (which I refer to as 'cap_location prefixes')
             cap_prefixes = ['"', ':']
-            # need to start enumerating with i = 1, not i = 0
-            #for i, word in enumerate(sent.words[1:]):
-            # for i, word in enumerate(sent.words)[1:]:
             for i, word in enumerate(sent.words):
                 if i == 0:
                     first_word = sent.words[0]
-                    #print(i, first_word.text)
                     if first_word.upos != 'PROPN' and first_word.text != 'I':
                         sent.words[0].text = first_word.text.lower()
-                    #print(i, sent.words[0].text)
-                    #print()
                 else:
-                    #print(i, sent.words[i].text)
                     prev_word = sent.words[i-1]
                     if prev_word.text in cap_prefixes:
                         if word.upos != 'PROPN' and word.text != 'I':
                             sent.words[i].text = word.text.lower()
-                    #print(i, sent.words[i].text)
-                    #print()
+
+            decased_sent += sent.words
+        # only want to keep the text fields       
+        decased_sentences.append([word.text for word in decased_sent])
+
+    return decased_sentences
+
 
 
 # decase all words at cap_locations unless they are proper nouns or common nouns, or are the pronoun 'I'.
 # TODO: find better heuristic than this for distinguishing 'she/it' from 'they' from 'You':
 # if 'Sie' is at cap_location, it could either be 'she/it/they/You', where 'You' is formal. stanfordnlp pos tagger trained on corpus that uses automated labeling of number, plural, and gender, so treats every instance of 'Sie' as if it were 3rd person plural, with no gender. therefore, cannot use that info to distinguish 'You' (which should not be lower cased) from 'they', (which should be lower cased). however, if means 'she/it', then will be singular, feminine, so could use that info to at least properly decase those senses.
 def german_decase(corpus, num=5):
+    decased_sentences = []
     for doc in corpus[:num]:
+        decased_sent = [] # List[Word]
         for sent in doc.sentences:
             cap_prefixes = ['"', ':']
             for i, word in enumerate(sent.words):
                 if i == 0:
                     # first word always at a cap_location, so handle separately
                     word = sent.words[0]
-                    #print(i, word.text)
                     if word.upos == 'PRON':
                         if word.text != 'Sie' or (word.text == 'Sie' and "Gender=Fem" in word.feats):
                             sent.words[0].text = word.text.lower()
                     elif word.upos != 'PROPN' and word.upos != 'NOUN':
                         sent.words[0].text = word.text.lower()
-                    #print(i, sent.words[0].text)
-                    #print()
                 else:
-                    #print(i, sent.words[i].text)
                     prev_word = sent.words[i-1]
                     if prev_word.text in cap_prefixes:
                         if word.upos == 'PRON':
@@ -232,11 +209,33 @@ def german_decase(corpus, num=5):
                                 sent.words[i].text = word.text.lower()
                         elif word.upos != 'PROPN' and word.upos != 'NOUN':
                             sent.words[i].text = word.text.lower()
-                    #print(i, sent.words[i].text)
-                    #print()
-        #print(sent)
+                    
 
+            decased_sent += sent.words
+        # only want to keep the text fields       
+        decased_sentences.append([word.text for word in decased_sent])
+
+    return decased_sentences
 
 
 def test_german_decase(src_processor):
     german_decase([src_processor('Sie haben etwas namens RNA.')], num=1)
+
+
+
+
+# corpuses is List[List[str]]
+# returns ref_corpuses, which is List[List[List[str]]], where middle list is a singleton, bc only i only ever provide a single reference translation for any given source sentence. This conforms to nltk corpus_bleu fn
+def get_references(corpuses):
+    ref_corpuses = {}
+    # for debugging/overfitting to small fraction of trainset:
+    ref_corpuses["train.en"] = [[target_sent] for target_sent in corpuses["train.en"]]
+
+    # for actual dev set:
+    ref_corpuses["dev.en"] = [[target_sent] for target_sent in corpuses["dev.en"]]
+
+    return ref_corpuses
+    
+# get the references
+# if use bpe, store in bpe_ files
+# filter out the songs (should i even bother?)
