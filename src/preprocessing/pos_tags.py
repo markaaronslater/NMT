@@ -1,6 +1,7 @@
 #import stanza
 from pickle import load, dump
 from math import ceil
+import stanza
 
 #corpus_types = {""}
 # pass arbitrary number of positional arguments. will load each of them into dict entry with their name and return the dict
@@ -23,6 +24,25 @@ def corpus_lengths(corpuses):
 
 
 
+# for each line of each corpus
+#   segments it into sentences
+#   tokenizes it into list of words
+#   tags each word with its part-of-speech, and other morphological data (e.g., person, case, number, gender, etc...)
+def segment_tokenize_tag():
+
+    stanza.download('de')
+    stanza.download('en')
+
+    src_processor = stanza.Pipeline(lang='de', processors='tokenize,mwt,pos')
+    trg_processor = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos')
+
+    corpuses = load_docs3(path, *corpus_names, num=None)
+
+    process_corpuses(corpuses, src_processor, trg_processor, path='/content/gdrive/My Drive/iwslt16_en_de/', piece_size=10000)
+
+
+
+
 # tags, tokenizes, segments corpuses.
 # default piece_size is large enough that dev and test sets all fit inside single piece, but train sets will each get split into roughly 20 pieces.
 # corpus is a list of len(corpus) Document objects
@@ -40,7 +60,7 @@ def apply_stanfordnlp_processor(corpus_name, corpus, processor, path='/content/g
 
 
 
-
+# stores each processed corpus in pieces, with one piece per pickle file
 def process_corpuses(corpuses, src_processor, trg_processor, path='/content/gdrive/My Drive/iwslt16_en_de/', piece_size=10000):
 
     # first, store the number of pieces that will be associated with each corpus
@@ -138,6 +158,9 @@ def get_processed_corpuses(*corpuses, path='/content/gdrive/My Drive/iwslt16_en_
 # each sentence of the corpus corresponds to a Document object in stanza.
 # Document object consists of one or more Sentence objects. (in case a src or trg sentence of the corpus is actually more than one sentence)
 
+# TODO: 
+# -write to files, for use with subword embeddings. 
+# -then, at the end, write decased_corpuses to a pickle file, for use with word embeddings.
 def decase_corpuses(corpuses, num=5):
     decased_corpuses = {}
     for corpus_name in corpuses:
@@ -236,6 +259,17 @@ def get_references(corpuses):
 
     return ref_corpuses
     
+
+
+# bpe script requires text file, so cant just save corpus list to pickle file. after have decased sentences, write them to decased_ files
+def write_sentences(corpuses, path='/content/gdrive/My Drive/iwslt16_en_de/'):
+    for corpus_name in corpuses:
+        with open(f"{path}decased_{corpus_name}")
+
+
+
+
+
 # get the references
 # if use bpe, store in bpe_ files
 # filter out the songs (should i even bother?)

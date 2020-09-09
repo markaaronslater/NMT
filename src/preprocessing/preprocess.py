@@ -143,14 +143,13 @@ def add_start_end_tokens(corpuses):
 
 
 def replace_with_indices(corpuses, vocabs):
-    to_indices(corpuses["train.de"], vocabs["srcV"])
-    to_indices(corpuses["train.en"], vocabs["trgV"])
-    to_indices(corpuses["dev.de"], vocabs["srcV"])   
-    to_indices(corpuses["test.de"], vocabs["srcV"])
+    to_indices(corpuses["train.de"], vocabs["src_word_to_idx"])
+    to_indices(corpuses["train.en"], vocabs["trg_word_to_idx"])
+    to_indices(corpuses["dev.de"], vocabs["src_word_to_idx"])   
+    to_indices(corpuses["test.de"], vocabs["src_word_to_idx"])
 
 
 def to_indices(sentences, vocab):
-    idx_sentences = []
     for i, sent in enumerate(sentences):
         new_sent = [] # contains corresponding indices of sent
         for word in sent:
