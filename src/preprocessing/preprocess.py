@@ -18,34 +18,27 @@ import string
 
 # load the corpus files into strings and then converts each into list of sentences
 # corpuses is a dictionary where the keys are file names, and the values are None. afterward, the values are the string form of their text
-def load_docs(path, corpuses, bpe=False, tok=False, decased=False):
-    prefix = ''
-    infix = ''
+# def load_docs(path, corpuses, bpe=False, tok=False, decased=False):
+#     prefix = ''
+#     infix = ''
 
-    if bpe:
-        infix = '.BPE'
-    elif tok:
-        prefix = 'tok_'
-    elif decased:
-        prefix = 'decased_'
+#     if bpe:
+#         infix = '.BPE'
+#     elif tok:
+#         prefix = 'tok_'
+#     elif decased:
+#         prefix = 'decased_'
 
-    ###!!!figure out elegant way to handle infix, or convert BPE to a prefix
-    for corpus_name in corpuses:
-        with open(path + prefix + corpus_name, mode='rt', encoding='utf-8') as f:
-            corpuses[corpus_name] = f.read().strip()
-            if corpuses[corpus_name]: 
-                corpuses[corpus_name] = corpuses[corpus_name].split('\n')
-            else:
-                corpuses[corpus_name] = [] # f was empty
+#     ###!!!figure out elegant way to handle infix, or convert BPE to a prefix
+#     for corpus_name in corpuses:
+#         with open(path + prefix + corpus_name, mode='rt', encoding='utf-8') as f:
+#             corpuses[corpus_name] = f.read().strip()
+#             if corpuses[corpus_name]: 
+#                 corpuses[corpus_name] = corpuses[corpus_name].split('\n')
+#             else:
+#                 corpuses[corpus_name] = [] # f was empty
 
 
-# print out first <num> sentences of each corpus
-def print_corpuses(corpuses, num=10):
-    for corpus_name in corpuses:
-        corpus = corpuses[corpus_name]
-        for sent in corpus[:num]:
-            print(sent)
-        print()
     
 
 
@@ -135,32 +128,6 @@ def str_to_list(corpuses, ref=False):
         for i, sent in enumerate(corpus):
             corpus[i] = sent.split() if not ref else [sent.split()]
 
-
-# prepend and append trg sentences with start-of-sentence token, <sos>, and end-of-sentence token, <eos>, respectively
-def add_start_end_tokens(corpuses):
-    ###???is this list concat a constant time op??? is it creating a copy???
-    corpuses["train.en"] = [['<sos>'] + sent + ['<eos>'] for sent in corpuses["train.en"]]
-
-
-def replace_with_indices(corpuses, vocabs):
-    to_indices(corpuses["train.de"], vocabs["src_word_to_idx"])
-    to_indices(corpuses["train.en"], vocabs["trg_word_to_idx"])
-    to_indices(corpuses["dev.de"], vocabs["src_word_to_idx"])   
-    to_indices(corpuses["test.de"], vocabs["src_word_to_idx"])
-
-
-def to_indices(sentences, vocab):
-    for i, sent in enumerate(sentences):
-        new_sent = [] # contains corresponding indices of sent
-        for word in sent:
-            try:
-                new_sent.append(vocab[word])
-            except KeyError:
-                ### not quite sure why this happens. maybe some sort of quirk in the subword-nmt script. i'll figure it out later.
-                # one clue is that they all seem to be special unicode ch's. maybe i am not using proper encoding scheme.
-                print(f"warning: found and removed unknown word: {word} in sent: {sent}")
-                print()
-        sentences[i] = new_sent
 
 
 

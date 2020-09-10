@@ -1,95 +1,5 @@
 from collections import Counter
 
-from preprocess import replace_with_indices, to_indices
-
-def get_normalized_corpuses():
-    get_processed_corpuses()
-    decase_corpuses()
-    if vocab_type == "subword":
-        get_subword_corpuses()
-
-    # !!!save normalized corpuses to pickle files
-
-    return normalized_corpuses
-
-# does not make a ton of sense to make one end-to-end preprocessing function, bc the stanford nlp stanza pos-tagger, tokenizer, segmenter step is time-consuming, so makes more sense to do that a single time & save the results to files.
-# next, use the processor outputs to normalize the corpuses.
-# finally, convert the normalized corpuses into batches of tensors that can directly pass to the model.
-
-# -convert corpuses into model inputs:
-
-# (0) make sure stanza is installed (pip install stanza)
-
-# -produce data needed for corpus normalization:
-# (1) run segment_tokenize_tag # will only ever need to run this once
-
-# -use that data to normalize the corpuses:
-# (2) run get_normalized_corpuses()
-
-# -convert normalized corpuses into batches of tensors that can directly be passed to the model:
-# (3) run produce_network_inputs()
-
-# -> after each step, saves to pickle files so never need repeat a step
-
-
-# -train model:
-# (4) build model using a config file or by passing arguments via argparse
-
-# -test model:
-# (5) choose a model checkpoint, perform inference on dev set
-# (6) eval using sacrebleu script
-
-
-
-def get_subword_corpuses():
-    pass
-    #   -run jointBPE.sh on these decased files. 
-    # ??do this outside of script, or inside, via SubProcess library??
-    #   -read these bpe_ files into corpuses.
-    #   -tokenize via naive whitespace splitting (do not need to run stanfordnlpprocessor(segment, tokenize) again, bc essentially already tokenized as sentences of subwords, since jointBPE.sh was applied to tokenized sentences of words). 
-    #   -save to pickle files (such that filename documents choices of numMerges, vocabThreshold, etc.)
-
-
-
-
-
-# input: corpuses consists of tokenized, segmented, decased sentences, which consist of words or subwords (depending on vocab_type)
-# output: list of batches of tensors that can be directly fed to the encoder-decoder network (writes them to pickle files)
-# !!!use argparse
-def produce_network_inputs(corpuses):
-    assert vocab_type == "word" or vocab_type == "subword"
-
-    # load normalized corpuses from pickle files
-    corpuses = load_normalized_corpuses()
-
-    # build vocabs
-    if vocab_type == "word":
-        get_word_vocabs()
-        replace_with_unk_tokens(corpuses, src_vocab_words, trg_vocab_words)
-    elif vocab_type == "subword":
-        # get_vocabs is much simpler than word_level, bc all the work was already done by jointBPE.sh. just needs to read it from file.
-        get_subword_vocabs()
-
-
-    get_references(corpuses) # for estimating model quality after each epoch using corpus_bleu
-
-    add_start_end_tokens(corpuses) # dont include in references
-
-    replace_with_indices(corpuses, vocabs)
-
-    get_batches()
-
-
-    # !!!save batches and references to pickle files so can skip this step next time
-
-    # wrt vocabulary, model just needs idx_to_trg_word for producing translations, and needs lengths of vocabs so can build embedding table
-    return batches, vocabs["idx_to_trg_word"]
-
-
-
-
-
-
 
 
 
@@ -176,20 +86,6 @@ def trim_vocab_by_topk(counter, top_k=30000):
     return set([word for word, count in sorted(counter.items(), key = lambda c: c[1], reverse=True)[:top_k]])
 
 
-# 'unknown' tokens are only necessary when using a word-level (rather than subword-level) vocabulary
-def replace_with_unk_tokens(corpuses, src_vocab_words, trg_vocab_words):     
-    removeOOV(corpuses["train.de"], src_vocab_words)    
-    removeOOV(corpuses["train.en"], trg_vocab_words)
-    # next 2 are no-ops if these corpuses dne (e.g., when debugging):    
-    removeOOV(corpuses["dev.de"], src_vocab_words)  
-    # (do not replace dev targets with unk) 
-    removeOOV(corpuses["test.de"], src_vocab_words)
-
-
-# for each word, if it does not belong to the trimmed vocabulary (it is an Out-Of-Vocabulary word), replace it with the 'unknown' token
-def removeOOV(sentences, vocab_words):
-    for i, sent in enumerate(sentences):
-        sentences[i] = [token if token in vocab_words else '<unk>' for token in sent]
 
 
 # src and trg corpuses now consist exclusively of words in src and trg vocab_words, and <unk> 
