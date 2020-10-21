@@ -29,9 +29,11 @@ def build_model_inputs(*corpus_names, vocab_params, path='/content/gdrive/My Dri
     if vocab_params["vocab_type"] == "word":
         vocabs = build_word_vocabs(corpuses, vocab_params)
     elif vocab_params["vocab_type"] == "subword":
-        # get_vocabs is much simpler than word_level, bc all the work was already done by jointBPE.sh. just needs to read it from file. i.e., don't need to pass corpuses as param
-        vocabs = build_subword_vocabs(path)
-
+        if joint:
+            vocabs = build_subword_joint_vocabs(path)
+        else:
+            vocabs = build_subword_vocabs(path)
+            
     # convert each corpus of words to corpus of indices
     apply_vocab(corpuses, vocabs, vocab_params["vocab_type"])
 

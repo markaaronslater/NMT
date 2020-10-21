@@ -24,7 +24,6 @@ def get_preprocess_phase1_outputs(*corpuses, path='/content/gdrive/My Drive/iwsl
 def merge_corpus_pieces(corpus_name, num_pieces, path='/content/gdrive/My Drive/iwslt16_en_de/'):
     merged_corpus = []
     for i in range(1, num_pieces+1):
-        #merged_corpus += load_corpus(f"{path}processed_{corpus_name}_{i}")
-        merged_corpus += load(open(f"{path}processed_{corpus_name}_{i}", 'rb'))
+        merged_corpus += load(open(f"{path}phase1_{corpus_name}_{i}", 'rb'))
 
     return merged_corpus

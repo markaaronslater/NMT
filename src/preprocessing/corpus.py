@@ -1,69 +1,49 @@
 from pickle import load, dump
 
 
-# utility functions for loading/storing corpuses from/to text or pickle files, examining corpus contents (for debugging), etc.
+# utility functions for loading/storing corpuses from/to text files, examining corpus contents (for debugging), etc.
 
 # pass arbitrary number of positional arguments. will load each of them into dict entry with their name and return the dict
-# if num is not None, then will only load the first num lines of each corpus
+# if num is not None, then will only load the first <num> lines of each corpus, starting from <_start>
 
-# TODO: add support for start point
-def read_corpuses(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', num=None):
+# startpoint uses 1-based idxing (to match unix line numbering)
+def read_corpuses(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', _start=1, num=None):
     corpuses = {}
     for corpus_name in corpus_names:
-        corpuses[corpus_name] = read_corpus(corpus_name, path, prefix, num)
+        corpuses[corpus_name] = read_corpus(corpus_name, path, prefix, _start, num)
             
     return corpuses
 
 
-def read_corpus(corpus_name, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', num=None):
+# read lines <start> thru <start> + <num> of corpus at text file 
+def read_corpus(corpus_name, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', _start=1, num=None):
     assert prefix in ['', 'decased_', 'bpe_', 'tok_']
     with open(path + prefix + corpus_name, mode='rt', encoding='utf-8') as f:
         corpus = f.read().strip().split('\n')
-        if num is not None:
-            corpus = corpus[:num] # only keep first <num> sentences of the corpus
+        upper = num if num is not None else len(corpus)
+        start = _start-1 # convert to 0-based idxing
 
-    return corpus
+    return corpus[start:start+upper]
 
 
 # prefix can be decased_ if decased
 # or bpe_ (if decased and word-split)
-# or even tok_ (if just segmented and tokenized)
+# or even tok_ (if just segmented and tokenized) (haven't added support for this yet)
 # each corpus in corpuses is expected to be tokenized, at the very least (List[List[str]])
 # write each corpus inside corpuses to a text file.
-def write_corpuses(corpuses, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', num=None):
+def write_corpuses(corpuses, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', _start=1, num=None):
     for corpus_name in corpuses:
-        write_corpus(corpus_name, corpuses[corpus_name], path, prefix, num)
+        write_corpus(corpus_name, corpuses[corpus_name], path, prefix, _start, num)
 
 
-def write_corpus(corpus_name, corpus, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', num=None):
+def write_corpus(corpus_name, corpus, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', _start=1, num=None):
     assert prefix in ['', 'decased_', 'bpe_', 'tok_']
-    if num is not None:
-        corpus = corpus[:num] # only write the first <num> sentences of corpus
+    upper = num if num is not None else len(corpus)
+    start = _start-1 # convert to 0-based idxing
     with open(path + prefix + corpus_name, mode='wt', encoding='utf-8') as f:
-        for sent in corpus:
+        for sent in corpus[start:start+upper]:
             f.write(' '.join(sent))
             f.write('\n')
-
-
-
-# write each corpus inside corpuses to a pickle file.
-# this will be used for storing phase 2 of preprocessing (only relevant if using word vocab), 
-# phase 3 of preprocessing (only relevant if using subword vocab)
-# and batches of tensors
-# def store_corpuses(corpuses, path):
-#     for corpus in corpuses:
-
-
-###!!! commenting these out, bc not always used for a corpus, and barely simplify the pickle call. just call load and dump directly from now on.
-# pass absolute path to filename to be saved to.
-# corpus is a list of objects. (type of object depends on which stage of preprocessing pipeline we're at)
-# def store_corpus(corpus, path):
-#     dump(corpus, open(path, 'wb'))
-#     print(f"saved to {path}")
-#     print()
-
-# def load_corpus(path):
-#     return load(open(path, 'rb'))
 
 
 
@@ -85,7 +65,7 @@ def tokenize_corpus(corpus):
 
 
 # input: corpuses is List[List[str]]
-# output: ref_corpuses, which is List[List[List[str]]], where middle list is a singleton, bc i only ever provide a single reference translation for any given source sentence. This conforms to nltk corpus_bleu fn.
+# output: ref_corpuses, which is List[List[List[str]]], where middle list is a singleton, bc i only ever provide a single reference translation for any given source sentence. ("puts single pair of brackets around each tokenized sentence (List[str] so that now List[List[str]]") This conforms to nltk corpus_bleu fn.
 # finally, writes to pickle file
 def get_references(corpuses, num_overfit=10):
     ref_corpuses = {}
@@ -106,6 +86,15 @@ def get_tokenized_corpuses(*corpus_names, path='/content/gdrive/My Drive/iwslt16
     ref_corpuses = get_references(corpuses) # for estimating model quality after each epoch using corpus_bleu
     
     return corpuses, ref_corpuses
+
+
+# utility function that converts corpuses to expected form by stanfordnlp stanza tokenizer, so that will not perform sentence segmentation
+# (will perform sentence segmentation by itself, after the fact, since cannot use minibatches for that step without destroying src-trg line alignments)
+def insert_empty_lines(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_de/', prefix='', num=None):
+    pass
+
+
+
 
 
 ### do i need this?

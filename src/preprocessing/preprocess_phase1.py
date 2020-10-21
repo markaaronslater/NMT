@@ -10,6 +10,7 @@ from corpus import read_corpuses, is_src_corpus
 # stores outputs to pickle files.
 def preprocess_phase1(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_de/', piece_size=10000, src_lang="de", trg_lang="en"):
 
+    # NOTE:CHANGE!!! only need download specific processors (tokenize,mwt,pos).  faster. ~157M instead of ~607M per lang
     stanza.download(src_lang)
     stanza.download(trg_lang)
 
@@ -41,6 +42,8 @@ def apply_stanfordnlp_processors(corpuses, src_processor, trg_processor, path='/
 # tags, tokenizes, segments corpuses.
 # default piece_size is large enough that dev and test sets all fit inside single piece, but train sets will each get split into roughly 20 chunks, that will get stored separately as "checkpoints" in case colab disconnects during inference, etc., and then will concatenate them together when ready to use them.
 # corpus is a list of Document objects
+
+### TODO: at start point to continue off from, if got disconnected
 def apply_stanfordnlp_processor(corpus_name, corpus, processor, path='/content/gdrive/My Drive/iwslt16_en_de/', piece_size=10000):
     for j in range(0, len(corpus), piece_size):
         corpus_piece = corpus[j:j+piece_size] # list of piece_size Document objects
@@ -53,3 +56,9 @@ def apply_stanfordnlp_processor(corpus_name, corpus, processor, path='/content/g
         dump(docs, open(f"{path}phase1_{corpus_name}_{piece_number}", 'wb'))
 
 
+
+
+# for use when in unstable cloud environment, e.g., Google Colab, so if get disconnected, don't need to start all the way over.
+### replace function body with above. and overwrite that one with version that assumes stable environment
+def robust_apply_stanfordnlp_processor(corpus_name, corpus, processor, path='/content/gdrive/My Drive/iwslt16_en_de/', piece_size=10000):
+    pass

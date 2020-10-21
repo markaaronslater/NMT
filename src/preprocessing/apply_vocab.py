@@ -39,12 +39,16 @@ def replace_with_indices(corpuses, vocabs):
 def to_indices(sentences, vocab):
     for i, sent in enumerate(sentences):
         new_sent = [] # contains corresponding indices of sent
-        for word in sent:
+        for symbol in sent:
+            # symbol is either a word or subword
             try:
-                new_sent.append(vocab[word])
+                new_sent.append(vocab[symbol])
             except KeyError:
-                ### not quite sure why this happens. maybe some sort of quirk in the subword-nmt script. i'll figure it out later.
-                # one clue is that they all seem to be special unicode ch's. maybe i am not using proper encoding scheme.
-                print(f"warning: found and removed unknown word: {word} in sent: {sent}")
+                # catches OOV symbols in src dev/test sets when using subword vocabs.
+                # there are 2 types of OOV symbols:
+                # 1 - a character that never occurred at all (whether in isolation or as part of word) in src training set.
+                # 2 - a symbol that never occurred in isolation in the src training set after segment it based on learned bpe codes (always occurred inside larger symbol) (never happened for me)
+                #   NOTE: it could have occurred in original train set, but not the threshold number of times, as specified by <vocab_threshold>, so never occurred in segmented train set.
+                print(f"warning: found and removed unknown symbol: {symbol} in sent: {sent}")
                 print()
         sentences[i] = new_sent

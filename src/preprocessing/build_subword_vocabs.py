@@ -1,5 +1,7 @@
 # vocab files contain lines of the form "<subword> <count>"
 # i assume i'm supposed to conflate the same morpheme of both langs into single entry/meaning
+
+# get_vocabs is much simpler than word_level, bc all the work was already done by jointBPE.sh. just needs to read it from file. i.e., don't need to pass corpuses as param
 def build_subword_vocabs(src_vocab_file, trg_vocab_file):
     vocab = {'<pad>':0, '<sos>':1, '<eos>':2}
     with open(src_vocab_file, "r") as f:
@@ -26,3 +28,10 @@ def build_subword_vocabs(src_vocab_file, trg_vocab_file):
 
     idx_to_subword = dict((v,k) for (k,v) in vocab.items())
     return vocab, idx_to_subword
+
+
+
+if __name__ == '__main__':
+    v, i = build_subword_vocabs('./Downloads/vocab.de', './Downloads/vocab-2.en')
+    for key, val in v.items():
+        print(f"{key}: {val}")

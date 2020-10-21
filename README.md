@@ -40,9 +40,10 @@ run on commandline as preprocess_phase2.py (use argparse)
 
 
 optional - only necessary if using subword vocab (rather than word vocab)
-   (1.3) run jointBPE.sh
+   (1.3) run jointBPE.sh or BPE.sh
       -performs word-splitting on the decased files
       -builds subword vocab
+         -jointBPE.sh learns a joint vocab for both src and trg. BPE.sh learns separate vocabs for src and trg
 
 
 (1.4) run build_model_inputs() fn
@@ -68,5 +69,7 @@ run on commandline as build_model_inputs.py (use argparse)
 
 (3) test model:
 (3.1) choose a model checkpoint, perform inference on dev set
+
 (3.2) eval using sacrebleu script
+run sacrebleu perl script
 

@@ -13,6 +13,9 @@ from processCorpuses import formatPrediction, naiveRecase
 class RNNencdec(nn.Module):
     def __init__(self, encoder, decoder, embType):
         super(RNNencdec, self).__init__()
+
+        self.initialize(hyperparams)
+
         if encoder.bi_enc and not encoder.project:
             assert decoder.hidden_size == 2 * encoder.hidden_size
         else:    
@@ -26,7 +29,21 @@ class RNNencdec(nn.Module):
         if embType == 'jointBPE': # ??share vocabs in enc and dec?? what if tie weights to projectToV as well??
             self.encoder.src_embeddings.weight = self.decoder.trg_embeddings.weight
         
-    
+    def initialize(hyperparams):
+        if encoder.bi_enc and not encoder.project:
+            assert decoder.hidden_size == 2 * encoder.hidden_size
+        else:    
+            assert decoder.hidden_size == encoder.hidden_size
+            #assert decoder.hidden_size == decoder.input_size
+        assert decoder.num_layers == encoder.num_layers
+        #assert decoder.num_layers == 1
+        assert encoder.dev == decoder.dev
+        self.encoder = encoder
+        self.decoder = decoder
+        if embType == 'jointBPE': # ??share vocabs in enc and dec?? what if tie weights to projectToV as well??
+            self.encoder.src_embeddings.weight = self.decoder.trg_embeddings.weight
+
+
     def forward(self, encoder_inputs_batch, decoder_inputs_batch):
         encoder_states, decoder_initial_state, src_lengths = self.encoder(encoder_inputs_batch)
         return self.decoder(decoder_inputs_batch, encoder_states, decoder_initial_state, src_lengths)

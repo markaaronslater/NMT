@@ -13,6 +13,10 @@ def decase_corpuses(corpuses, path='/content/gdrive/My Drive/iwslt16_en_de/', nu
 # each corpus in corpuses is a list of Document objects (under Stanza spec), bc working with preprocess_phase1() outputs.
 # after this stage, the pos and other morphological data are no longer needed, so just overwrites corpuses to hold the decased corpus as List[List[Str]], and writes it to a file for later use by jointBPE.sh script, if using subword vocab.
 # should_be_lower is a function.
+
+
+# TODO: with new preprocess_phase1, the Document object is the entire corpus, so get each sentence via 'for sent in doc.sentences'.
+# now, add all other eos punctuation to cap_prefixes, since no longer labeling sentences...
 def decase(corpus_name, corpuses, should_be_lower, path='/content/gdrive/My Drive/iwslt16_en_de/', num=None):
     upper = num if num is not None else len(corpuses[corpus_name])
     for i, doc in enumerate(corpuses[corpus_name][:upper]):
@@ -26,14 +30,10 @@ def decase(corpus_name, corpuses, should_be_lower, path='/content/gdrive/My Driv
 
         corpuses[corpus_name][i] = [word.text for word in decased_sent]
 
-    # actually do this inside wrapper
-    #write_corpus(corpus_name, corpuses[corpus_name], path, prefix='decased_')
 
 
 
-
-
-### the following should_be_lower() functions exploit domain knowledge about the given language to design heuristics about whether or not to decase a given word. given a word, returns true if it should be decased.
+### the following should_be_lower() functions exploit domain knowledge about the given language for designing heuristics about whether or not to decase a given word. given a word, returns true if it should be decased.
 
 
 # TODO: find better heuristic than this for distinguishing 'she/it' from 'they' from 'You':
