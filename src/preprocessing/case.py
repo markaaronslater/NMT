@@ -1,4 +1,3 @@
-from tokenize import eos
 
 
 def decaseCorpuses(corpuses, path, de_namesTable, en_namesTable):
@@ -87,50 +86,5 @@ def formatPrediction(sent):
 
 
 
-# when passed list of str(words), capitalizes first word of sentence
-# and the first word following a double quote
-def naiveRecase(sent):
-    if not sent:
-        return sent # for debugging empty sentence
 
-    sent[0] = sent[0].capitalize()
-    # try:
-    #     sent[0] = sent[0].capitalize()
-    # except AttributeError:
-    #     print(sent)
-        
-    eosPositions = [i for i,word in enumerate(sent) if word in eos and i != len(sent)-1]
-    quotePositions = [i for i,word in enumerate(sent) if word == '"' and i != len(sent)-1]
-    # (do not extract double quote if occurs at last position of sentence, 
-    # bc nothing will follow it)
-
-    # in recasing, must handle quote openers and quote closers separately
-
-    # only capitalize word after endquote if word before endquote was eos
-    # capitalize word after startquote ??always??
-
-    # ex) " that's right , " he said .
-    # ->  " That's right , " he said.
-
-    # ex) I said , " yes , sir . I did . " and we started arguing .
-    # ->  I said , " Yes , sir . I did . " And we started arguing .
-
-    for j in quotePositions[::2]: # capitalize the first word inside each pair of double-quotes
-        sent[j+1] = sent[j+1].capitalize()
-    # makes simplifying assumption that for any sent with odd number of quotes,
-    # the unpaired quote comes at the end, not the beginning
-    # will be correct ~50% of the time, presumably.
-
-    # capitalize the first word after a pair of double quotes only if
-    # word before endquote was in eos 
-    for j in quotePositions[1::2]: 
-        if j-1 in eosPositions:
-            sent[j+1] = sent[j+1].capitalize()
-
-    # capitalize first word after eos
-    for j in eosPositions:
-        sent[j+1] = sent[j+1].capitalize()
-
-
-    return sent
 

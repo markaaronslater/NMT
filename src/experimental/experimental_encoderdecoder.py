@@ -801,3 +801,73 @@ class Decoder(nn.Module):
 
 
 
+
+
+
+
+
+
+def beam_search_translate(self, decoder_inputs, encoder_states, initial_state):
+        # -for first ts, the tracked variables have diff sizes than they will
+        # for all other ts, bc for the first ts, there is only one previous seq
+        # to extend (containing the sos token).
+
+        # -for all other ts, there will be beam_size previous seqs, 
+        # along with their total (summed) log probs, and the hidden states
+        # that enabled their most recently added word's prediction
+
+        # seqProbs init as zero vector of length 1 bc logProb of sentence beginning with sos is 0
+        # (prob is 1)
+        # at all other ts, will of length beam_size
+        beam_likelihoods = torch.zeros(1).cuda() 
+
+        # for first ts, extending a prev beam of size 1, so:
+        # h_i and c_i will each be nl x 1 x hs, but
+        # for all other ts, they will each be nl x beam_size x hs
+        # seqs will be 1 x 1, but
+        # for all other ts, will be beam_size x 1
+        (h_i, c_i) = initial_state 
+        beam_sequences = torch.full((1, 1), int(self.sos_idx)).long().cuda()
+        input_i = self.embed(beam_sequences) # 1 x 1 x d_emb
+
+        ### NOTE: unlike training step, need to normalize the predictions with log softmax, bc need to track the running log probabilities of the sequences
+        for i in range(decoder_inputs["max_src_len"] + self.decode_slack):
+            if i != 0:
+                dists_i, (h_i, c_i) = self.decode_step(input_i, (h_i, c_i), decoder_inputs["mask"], encoder_states.expand(self.beam_size, -1, -1), decoder_inputs["mask"])
+            else:
+                dists_i, (h_i, c_i) = self.decode_step(input_i, (h_i, c_i), decoder_inputs["mask"], encoder_states, decoder_inputs["mask"])
+
+
+            # each beam gets to produce beam_size candidates
+            top_preds, top_words = torch.topk(dists_i.t(), self.beam_size, dim=0)
+            top_words = top_words.view(-1)
+            summed_likelihoods = (beam_likelihoods.unsqueeze(0) + top_preds).view(-1)
+
+            # keep the top beam_size of those candidates
+            top_summed_likelihoods, top_summed_likelihood_indices = torch.topk(summed_likelihoods, self.beam_size)
+            beam_sequence_indices = top_summed_likelihood_indices % self.beam_size
+            if i != 0: 
+                h_i = h_i[:,beam_sequence_indices]
+                c_i = c_i[:,beam_sequence_indices]
+            else:
+                # for first ts, the same hidden state produced all beam_size predictions
+                h_i = h_i.expand(self.num_layers,self.beam_size,self.hidden_size).contiguous()
+                c_i = c_i.expand(self.num_layers,self.beam_size,self.hidden_size).contiguous()
+                sequences = sequences.expand(self.beam_size,1)
+        
+            # sequence extensions. the indices of the words to extend each sequence of beam with
+            sequence_extensions = top_words[top_summed_likelihood_indices].unsqueeze(1)
+            beam_sequences = torch.cat((beam_sequences[beam_sequence_indices], sequence_extensions), dim=1)
+
+            # termination condition: 
+            # most probable seq produced by the beam ends in eos
+            if beam_sequences[0][-1] == self.eos_idx:  
+                break
+
+            input_i = self.embed(beam_sequences[:,i+1].unsqueeze(1)) # beam_size x 1 x d_emb
+
+        # translation is now (bsz x max_src_len+decode_slack)
+        translation = beam_sequences[0][1:].unsqueeze(0) # dn include the sos symbol
+
+        return translation
+

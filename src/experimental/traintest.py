@@ -12,40 +12,28 @@ import sys
 # modified version of train that saves model after each epoch
 # further, we now pass it an optimizer rather than initializing inside, so can continue training a checkpointed model
 # folder is the name of the directory that holds checkpoints and translations folders
-def train(translator, optimizer, trainBatches, devBatches, references, num_epochs=10, cur_ep=0, folder='./', save=True):
-    ###!!!changed from default (mean) to sum:
-    nll = torch.nn.NLLLoss(reduction='sum')
+def train(translator, optimizer, train_batches, dev_batches, references, num_epochs=10, cur_ep=0, folder='./', save=True):
+    ###easier to debug neural net when use sum, so can more clearly observe if loss is going down.
+    #nll = torch.nn.NLLLoss(reduction='sum')
+    ###!!!switched to CE loss. so do not compute log softmax in fwd_pass
+    loss = torch.nn.CrossEntropyLoss()
 
     for ep in range(cur_ep, num_epochs):
         ep_loss = 0.
         ep_start_time = time.time()
-        shuffle(trainBatches)
-        for (encoder_inputs_batch, decoder_inputs_batch, targets_batch) in trainBatches:
-            packedDists = translator(encoder_inputs_batch, decoder_inputs_batch)
-            ###!!! new spec
-            #packedTargets, _ = pack_padded_sequence(targets_batch[0], targets_batch[1], batch_first=True)
-            #??why didnt i do this ahead of time??
-            packedTargets = pack_padded_sequence(targets_batch[0], targets_batch[1], batch_first=True)
-            packedTargets = packedTargets.data
-
-            ###for debug:
-            # preds = packedDists.argmax(1)
-            # print(preds)
-            # print(packedTargets)
-            # print()
-
-
-
-
-            batch_loss = nll(packedDists, packedTargets) # loss of predictions of current model weights
+        shuffle(train_batches)
+        for (encoder_inputs, decoder_inputs, decoder_targets) in train_batches:
+            dists = translator(encoder_inputs, decoder_inputs)
+            batch_loss = loss(dists, decoder_targets)
             ep_loss += batch_loss.detach()
-            optimizer.zero_grad() # computing SGD, not GD
-            batch_loss.backward() # compute dL/dw for all model weights
-            optimizer.step() # adjust weights in opposite direction of dL/dw
+            optimizer.zero_grad()
+            batch_loss.backward()
+            optimizer.step()
         
         # save model checkpoint after each epoch ###
         ###!!!place this in a helper function. put all relevant data in a dictionary so can pass with single param, etc.
         if save:
+            save_checkpoint(translator, optimizer, ep, ep_loss, folder)
             torch.save({
                 'epoch': ep,
                 'model_state_dict': translator.state_dict(),
@@ -91,6 +79,13 @@ def train(translator, optimizer, trainBatches, devBatches, references, num_epoch
 
 
 
+def save_checkpoint(translator, optimizer, ep, ep_loss, folder):
+    torch.save({
+        'epoch': ep,
+        'model_state_dict': translator.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'ep_loss': ep_loss,
+    }, folder + 'cp' + str(ep) + '.tar')
 
 
 

@@ -1,0 +1,4 @@
+early_stopping=True
+num_epochs=30
+learning_rate=.001
+optimizer=Adam

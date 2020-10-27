@@ -1,0 +1,6 @@
+vocab_type=subword_joint
+trim_type=threshold
+src_k=30000
+trg_k=30000
+src_thres=2
+trg_thres=2
