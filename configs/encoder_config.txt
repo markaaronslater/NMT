@@ -1,3 +1,0 @@
-bidirectional=True
-reverse_src=False
-decoder_init_scheme=layer_to_layer

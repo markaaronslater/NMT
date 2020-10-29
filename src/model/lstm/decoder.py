@@ -6,27 +6,27 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from beam_search_utils import initialize_beams, expand_beams, update_beams, write_finished_translations
 
 class Decoder(nn.Module):
-    def __init__(self, hyperparams, vocab_size, special_indices):
+    def __init__(self, hyperparams):
         super(Decoder, self).__init__()
-        self.vocab_size = vocab_size
-        self.sos_idx = special_indices["<sos_idx>"]
-        self.eos_idx = special_indices["<eos_idx>"]
+        self.sos_idx = hyperparams["sos_idx"]
+        self.eos_idx = hyperparams["eos_idx"]
         
         # hyperparameters settings
-        self.input_size = int(hyperparams['input_size'])
-        self.hidden_size = int(hyperparams['hidden_size'])
-        self.num_layers = int(hyperparams['num_layers'])
-        self.dropout = float(hyperparams['dropout'])
-        self.project_att_states = bool(hyperparams["attention_layer"])
+        self.vocab_size = hyperparams["trg_vocab_size"]
+        self.input_size = hyperparams["dec_input_size"]
+        self.hidden_size = hyperparams["dec_hidden_size"]
+        self.num_layers = hyperparams["dec_num_layers"]
+        self.dropout = hyperparams["dec_dropout"]
+        self.project_att_states = hyperparams["attention_layer"]
         self.attention = hyperparams["attention_fn"] != "none"
-        self.inference_alg = hyperparams['inference_alg']
-        # only project hidden state with intermediate layer if use attention mechanism
-        assert (self.attention or not self.project_att_states)
+        self.inference_alg = hyperparams["inference_alg"]
+        # # only project hidden state with intermediate layer if use attention mechanism
+        # assert (self.attention or not self.project_att_states)
 
         if self.attention:
-            if hyperparams['attention_fn'] == "dot_product":
+            if hyperparams["attention_fn"] == "dot_product":
                 self.attend = dot_product_attn
-            elif hyperparams['attention_fn'] == "scaled_dot_product":
+            elif hyperparams["attention_fn"] == "scaled_dot_product":
                 self.attend = scaled_dot_product_attn
             else:
                 raise NameError(f"specified an unsupported attention mechanism: {hyperparams['attention_fn']}")
@@ -38,8 +38,8 @@ class Decoder(nn.Module):
         else:
             raise NameError(f"specified an unsupported inference algorithm: {hyperparams['inference_alg']}")
 
-        self.beam_width = int(hyperparams['beam_width'])
-        self.decode_slack = int(hyperparams['decode_slack'])
+        self.beam_width = hyperparams["beam_width"]
+        self.decode_slack = hyperparams["decode_slack"]
 
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)
@@ -57,8 +57,8 @@ class Decoder(nn.Module):
             self.out = nn.Linear(2*self.hidden_size, self.vocab_size)
 
         # use same matrix for embedding target words as for predicting probability distributions over those words
-        if bool(hyperparams['tie_weights']):
-            assert self.hidden_size == self.input_size
+        if bool(hyperparams["tie_weights"]):
+            #assert self.hidden_size == self.input_size
             ###???how do these dimensions work out, again???
             self.out.weight = self.embed.weight
 

@@ -3,6 +3,8 @@ import torch.nn as nn
 import time
 from nltk.translate.bleu_score import corpus_bleu
 
+from postprocess import postprocess
+
 # this same function is also used for predicting the test set.
 # use greedy search if measuring model performance on dev set during training ( cheaper, and beam search will always perform at least as well anyway).
 # use "beam_search" if measuring model performance on test set after found a best model during training.
@@ -20,7 +22,7 @@ def predict(translator, dev_batches, references, idx_to_trg_word, folder, ep, in
         
 
         # post-process the translations
-        post_processed_translations = post_process(translation_idx_pairs, idx_to_trg_word, int(translator.decoder.eos_idx))
+        post_processed_translations = postprocess(translation_idx_pairs, idx_to_trg_word, int(translator.decoder.eos_idx))
 
         # write to file
         if write:

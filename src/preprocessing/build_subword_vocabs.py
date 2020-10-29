@@ -1,37 +1,42 @@
-# vocab files contain lines of the form "<subword> <count>"
-# i assume i'm supposed to conflate the same morpheme of both langs into single entry/meaning
+def build_subword_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file):
+    if vocab_type == "subword_ind":
+        vocabs = build_subword_ind_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file)
+    elif vocab_type == "subword_joint":
+        vocabs = build_subword_joint_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file)
+    
 
-# get_vocabs is much simpler than word_level, bc all the work was already done by jointBPE.sh. just needs to read it from file. i.e., don't need to pass corpuses as param
-def build_subword_vocabs(src_vocab_file, trg_vocab_file):
+# in this context, "word" can refer to word, subword, or single character.
+# (named this way for consistency with word-level vocab).
+def build_subword_ind_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file):
+    src_vocab = {'<pad>':0, '<sos>':1, '<eos>':2} 
+    get_vocab_mapping(src_vocab, corpus_path + src_vocab_file, vocab_threshold)
+    trg_vocab = {'<pad>':0, '<sos>':1, '<eos>':2}
+    get_vocab_mapping(trg_vocab, corpus_path + trg_vocab_file, vocab_threshold)
+
+    return {    "src_word_to_idx":src_vocab,
+                "idx_to_src_word":{v:k for k, v in src_vocab.items()},
+                "trg_word_to_idx":trg_vocab,
+                "idx_to_trg_word":{v:k for k, v in trg_vocab.items()}
+            }
+
+
+def build_subword_joint_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file):
     vocab = {'<pad>':0, '<sos>':1, '<eos>':2}
-    with open(src_vocab_file, "r") as f:
-        #!!! ??do i need to use utf8??
-        for line in f:
-            subword = line.split()[0]
-            if subword not in vocab:
+    get_vocab_mapping(vocab, corpus_path + src_vocab_file, vocab_threshold)
+    get_vocab_mapping(vocab, corpus_path + trg_vocab_file, vocab_threshold)
+
+    # pass 2 copies of each dict for compatibility with preprocess.py.
+    # !!!fix this.
+    return {    "src_word_to_idx":vocab,
+                "idx_to_src_word":{v:k for k, v in vocab.items()},
+                "trg_word_to_idx":vocab,
+                "idx_to_trg_word":{v:k for k, v in vocab.items()}
+            }
+
+
+def get_vocab_mapping(vocab, vocab_file, vocab_threshold):
+    with open(vocab_file, "r") as f:
+        for subword_count in f:
+            subword, count = subword_count.split()[0], subword_count.split()[1]
+            if subword not in vocab and count >= vocab_threshold:
                 vocab[subword] = len(vocab)
-    numDe = len(vocab)-3
-    print("number of german subwords is {}".format(numDe))
-    with open(trg_vocab_file, "r") as f:
-        for line in f:
-            subword = line.split()[0]
-            if subword not in vocab:
-                vocab[subword] = len(vocab)
-
-    numEn = len(vocab) - numDe - 3
-
-    # this highly underreports bc of subwords that belong to both langs
-    # not getting added twice:
-    print("number of english subwords is {}".format(numEn))
-
-    print("total number of subwords is {}".format(len(vocab)))
-
-    idx_to_subword = dict((v,k) for (k,v) in vocab.items())
-    return vocab, idx_to_subword
-
-
-
-if __name__ == '__main__':
-    v, i = build_subword_vocabs('./Downloads/vocab.de', './Downloads/vocab-2.en')
-    for key, val in v.items():
-        print(f"{key}: {val}")

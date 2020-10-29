@@ -1,7 +1,7 @@
 # translation_idx_pairs is list of pairs, where:
 # 1st component is (bsz x T) tensor, where T is number of decode time steps (at least 1, and at most max_src_len + decode_slack), holding the predicted translations.
 # 2nd component is (bsz,) tensor, where entry i holds line of source corpus that i'th translation of component 1 is for.
-def post_process(translation_batches, idx_to_trg_word, eos_idx):
+def postprocess(translation_batches, idx_to_trg_word, eos_idx, vocab_type="subword_joint"):
     translation_idx_pairs = [] # list of pairs where 1st component is list-form of translation, and 2nd component is source corpus line number of sentence it is a translation for
     for (translation, corpus_indices) in translation_batches:
         translation = extract_translation(translation.tolist(), eos_idx)
@@ -14,8 +14,8 @@ def post_process(translation_batches, idx_to_trg_word, eos_idx):
     # ("idx" in idx_to_trg_word refers to index in target vocabulary mapping)
     translations = [[idx_to_trg_word[i] for i in translation] for translation, _ in translation_idx_pairs]
 
-    # remove concatenated pos-tags, if applicable
-
+    if vocab_type in ["word_pos", "subword_pos"]:
+        remove_pos_tags()
 
     # naively reapply casing based on sentence and double-quote segmentation, and then detokenize (convert each sentence from a list of words into a string).
     # -> sacrebleu will "fully detokenize" them for you, e.g., convert I' ve -> I've
@@ -23,7 +23,8 @@ def post_process(translation_batches, idx_to_trg_word, eos_idx):
     # (see formatPrediction)
     translations = [' '.join(naive_recase(translation)) for translation in translations]
 
-    # desegment subwords back into words, if applicable
+    if vocab_type in ["subword_ind", "subword_joint", "subword_pos"]:
+        desegment_subwords()
 
     return translations
 
@@ -79,3 +80,13 @@ def naive_recase(sent):
             sent[j+1] = sent[j+1].capitalize()
 
     return sent
+
+
+def remove_pos_tags():
+    pass
+
+
+def desegment_subwords():
+    # give python equivalent of:
+    # !sed -E 's/(@@ )|(@@ ?$)//g' <dev.BPE.en > restored_dev.en
+    pass

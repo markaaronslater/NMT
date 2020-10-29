@@ -6,24 +6,22 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class Encoder(nn.Module):
-    def __init__(self, hyperparams, vocab_size):
+    def __init__(self, hyperparams):
         super(Encoder, self).__init__()
-        self.vocab_size = vocab_size
-        
         # hyperparameter settings
-        self.input_size = int(hyperparams['input_size'])
-        self.hidden_size = int(hyperparams['hidden_size'])
-        self.num_layers = int(hyperparams['num_layers'])
-        self.dropout = float(hyperparams['dropout'])
-        self.bidirectional = bool(hyperparams['bidirectional'])
-        self.reverse_src = bool(hyperparams['reverse_src'])
-        if hyperparams['decoder_init_scheme'] == "layer_to_layer":
+        self.vocab_size = hyperparams["src_vocab_size"]
+        self.input_size = hyperparams["enc_input_size"]
+        self.hidden_size = hyperparams["enc_hidden_size"]
+        self.num_layers = hyperparams["enc_num_layers"]
+        self.dropout = hyperparams["enc_dropout"]
+        self.bidirectional = hyperparams["bidirectional"]
+        self.reverse_src = hyperparams["reverse_src"]
+        if hyperparams["decoder_init_scheme"] == "layer_to_layer":
             self.initialize_decoder_state = layer_to_layer_initializer
-        elif hyperparams['decoder_init_scheme'] == "final_to_first":
+        elif hyperparams["decoder_init_scheme"] == "final_to_first":
             self.initialize_decoder_state = final_to_first_initializer
         else:
             raise NameError(f"specified an unsupported decoder init scheme: {hyperparams['decoder_init_scheme']}")
-
 
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)

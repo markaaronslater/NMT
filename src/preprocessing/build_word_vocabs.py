@@ -1,5 +1,9 @@
 from collections import Counter
-# wrapper function that given corpuses, learns a word-level vocab based on the src and trg train corpuses, that uses some trim function so that all words that do not fit in the vocabulary will be replaced in the corpus by the unknown token, <unk>. and then replaces each word with its index in its corresponding vocab
+# wrapper function that given corpuses, learns a word-level vocab based
+# on the src and trg train corpuses, that uses some trim function so
+# that all words that do not fit in the vocabulary will be replaced in the
+# corpus by the unknown token, <unk>.
+# and then replaces each word with its index in its corresponding vocab
 # corpuses is List[List[str]], where each sentence is List[str] (i.e., they are already tokenized).
 # to build a higher quality vocab, they should also be intelligently decased so that, e.g., do not produce 2 entries for 'Hey' and 'hey', just bc occurred at beginning of some sentence, quotation, etc.
 #??change so uses closures??
@@ -11,28 +15,14 @@ from collections import Counter
 #                 src_thres:2,
 #                 trg_thres:2 # ??need store anything for subword vocabs??
 #                 }
-
-# change params to all be in dict called vocab_params
-def build_word_vocabs(corpuses, vocab_params):
-    assert vocab_params["trim_type"] == "top_k" or vocab_params["trim_type"] == "threshold"
-
+def build_word_vocabs(corpuses, hyperparams):
     src_counter, trg_counter = get_train_word_counts(corpuses)
-    # print_vocab(src_counter)
-    # print_vocab(trg_counter)
-
-    if vocab_params["trim_type"] == "top_k":
-        src_vocab_words, trg_vocab_words = trim_vocab_by_topk(src_counter, trg_counter, vocab_params["src_k"], vocab_params["trg_k"])
-    elif vocab_params["trim_type"] == "threshold":
-        src_vocab_words, trg_vocab_words = trim_vocabs_by_thres(src_counter, trg_counter, vocab_params["src_thres"], vocab_params["trg_thres"])
-    
-    # print_vocab(src_vocab_words)
-    # print_vocab(trg_vocab_words)
+    if hyperparams["trim_type"] == "top_k":
+        src_vocab_words, trg_vocab_words = trim_vocab_by_topk(src_counter, trg_counter, hyperparams["src_k"], hyperparams["trg_k"])
+    elif hyperparams["trim_type"] == "threshold":
+        src_vocab_words, trg_vocab_words = trim_vocabs_by_thres(src_counter, trg_counter, hyperparams["src_thres"], hyperparams["trg_thres"])
 
     vocabs = get_vocab_mappings(corpuses, src_vocab_words, trg_vocab_words)
-    # print_vocab(vocabs["src_word_to_idx"])
-    # print_vocab(vocabs["idx_to_src_word"])
-    # print_vocab(vocabs["trg_word_to_idx"])
-    # print_vocab(vocabs["idx_to_trg_word"])
 
     return vocabs
 
@@ -93,7 +83,9 @@ def get_vocab_mappings(corpuses, src_vocab_words, trg_vocab_words):
     trg_word_to_idx, idx_to_trg_word = get_vocab_mapping(trg_vocab_words, offset=4)
 
     return {    "src_word_to_idx":src_word_to_idx,
-                "idx_to_src_word":idx_to_src_word, "trg_word_to_idx":trg_word_to_idx, "idx_to_trg_word":idx_to_trg_word
+                "idx_to_src_word":idx_to_src_word,
+                "trg_word_to_idx":trg_word_to_idx,
+                "idx_to_trg_word":idx_to_trg_word
             }
 
 
@@ -102,10 +94,10 @@ def get_vocab_mappings(corpuses, src_vocab_words, trg_vocab_words):
 # trg vocab uses 4 special tokens
 def get_vocab_mapping(vocab_words, offset=2):
     word_to_idx = {word:i+offset for i, word in enumerate(vocab_words)}
-    word_to_idx["<pad"], word_to_idx["<unk"] = 0, 1
+    word_to_idx["<pad>"], word_to_idx["<unk>"] = 0, 1
     if offset == 4:
         # only trg sentences have start-of-sentence / end-of-sentence tokens
-        word_to_idx["<sos"], word_to_idx["<eos"] = 2, 3
+        word_to_idx["<sos>"], word_to_idx["<eos>"] = 2, 3
     idx_to_word = {v:k for k, v in word_to_idx.items()}
 
     return word_to_idx, idx_to_word

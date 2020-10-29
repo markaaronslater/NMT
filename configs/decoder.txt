@@ -4,3 +4,7 @@ attention_layer=False
 inference_alg=beam_search
 beam_width=10
 decode_slack=20
+dec_input_size=300
+dec_hidden_size=600
+dec_num_layers=1
+dec_dropout=0.0

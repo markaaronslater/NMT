@@ -1,0 +1,11 @@
+early_stopping=True
+early_stopping_threshold=5
+from_scratch=True
+num_epochs=30
+learning_rate=.001
+L2_reg=0.0
+optimization_alg=Adam
+device=cuda:0
+train_bsz=64
+dev_bsz=32
+test_bsz=16
