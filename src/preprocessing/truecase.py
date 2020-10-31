@@ -1,8 +1,8 @@
-from corpus_utils import write_corpuses, is_src_corpus
-from apply_stanza_processors import retrieve_stanza_outputs
+from NMT.src.preprocessing.corpus_utils import write_corpuses, is_src_corpus
+from NMT.src.preprocessing.apply_stanza_processors import retrieve_stanza_outputs
 
 def truecase_corpuses(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_de/'):
-    corpuses = retrieve_stanza_outputs(corpus_names, path) ### doing inside here, rather than wrapper fn
+    corpuses = retrieve_stanza_outputs(*corpus_names, path=path)
     for corpus_name in corpuses:
         if is_src_corpus(corpus_name):
             truecase(corpus_name, corpuses, should_lower_de, path)  
@@ -63,7 +63,7 @@ eos_symbols = {".", "!", "?", "\"", ":", "..", "...", "...."}
 # -word is the current word we are deciding if should be decased or not.
 # -previous_word is None when <word> is first of the sentence.
 def should_lower_de(word, previous_word=None):
-    if not previous_word or previous_word in eos_symbols:
+    if not previous_word or previous_word.text in eos_symbols:
         # word is first word of sentence, or previous word is a "capitalization prefix"
         if word.upos == 'PRON':
             if word.text != 'Sie' or (word.text == 'Sie' and "Gender=Fem" in word.feats):
@@ -77,7 +77,7 @@ def should_lower_de(word, previous_word=None):
 # decase all words at cap_locations unless they are proper nouns, or are the pronoun 'I'.
 # (sentence is already tokenized, so "I" conjunctions, e.g., "I've", appear as "I 've")
 def should_lower_en(word, previous_word=None):
-    if not previous_word or previous_word in eos_symbols:
+    if not previous_word or previous_word.text in eos_symbols:
         if word.upos != 'PROPN' and word.text != 'I':
             return True
 

@@ -4,3 +4,5 @@ src_k=30000
 trg_k=30000
 src_thres=2
 trg_thres=2
+num_merge_ops=30000
+vocab_threshold=10

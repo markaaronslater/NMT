@@ -22,7 +22,8 @@ def initialize_beams(dists_1, hidden_1, hp):
     # reshape so can pass thru lstm (within a given beam of batch, 
     # each of its sequences was produced by same hidden state).
     h_i = h_1.view(nl, bsz*b, d_hid)
-    c_i = c_1.expand(-1,bsz*b,-1).contiguous()
+    #c_i = c_1.expand(-1,bsz*b,-1).contiguous() #???how did this happen???
+    c_i = c_1.view(nl, bsz*b, d_hid)
 
     return sequences, seq_likelihoods, (h_i, c_i), top_words
 

@@ -1,3 +1,5 @@
+from sacremoses import MosesDetokenizer
+
 # translation_idx_pairs is list of pairs, where:
 # 1st component is (bsz x T) tensor, where T is number of decode time steps (at least 1, and at most max_src_len + decode_slack), holding the predicted translations.
 # 2nd component is (bsz,) tensor, where entry i holds line of source corpus that i'th translation of component 1 is for.
@@ -5,7 +7,7 @@ def postprocess(translation_batches, idx_to_trg_word, eos_idx, vocab_type="subwo
     translation_idx_pairs = [] # list of pairs where 1st component is list-form of translation, and 2nd component is source corpus line number of sentence it is a translation for
     for (translation, corpus_indices) in translation_batches:
         translation = extract_translation(translation.tolist(), eos_idx)
-        translation_idx_pairs += list(zip(translation, corpus_indices.to_list()))
+        translation_idx_pairs += list(zip(translation, corpus_indices.tolist()))
 
     # unsort them so line up with dev trg sentences during evaluation.
     translation_idx_pairs = sorted(translation_idx_pairs, key = lambda pair: pair[1])
@@ -20,11 +22,15 @@ def postprocess(translation_batches, idx_to_trg_word, eos_idx, vocab_type="subwo
     # naively reapply casing based on sentence and double-quote segmentation, and then detokenize (convert each sentence from a list of words into a string).
     # -> sacrebleu will "fully detokenize" them for you, e.g., convert I' ve -> I've
     # ??but will it do 20 - year - old -> 20-year-old??
-    # (see formatPrediction)
-    translations = [' '.join(naive_recase(translation)) for translation in translations]
+    # (see format_prediction)
+    translations = [naive_recase(translation) for translation in translations]
 
     if vocab_type in ["subword_ind", "subword_joint", "subword_pos"]:
-        desegment_subwords()
+        translations = desegment_subwords(translations)
+
+    # detokenize
+    md = MosesDetokenizer(lang='en')
+    translations = [md.detokenize(translation) for translation in translations]
 
     return translations
 
@@ -86,7 +92,13 @@ def remove_pos_tags():
     pass
 
 
-def desegment_subwords():
-    # give python equivalent of:
-    # !sed -E 's/(@@ )|(@@ ?$)//g' <dev.BPE.en > restored_dev.en
-    pass
+# given list of lists of subword tokens, returns list of lists of word tokens
+def desegment_subwords(translations):
+    desegmented_translations = []
+    for translation in translations:
+        desegmented = ' '.join(translation).replace('@@ ', '')
+        if desegmented.endswith('@@'):
+            desegmented = desegmented[:-2]
+        desegmented_translations.append(desegmented.split())
+
+    return desegmented_translations

@@ -1,13 +1,12 @@
 from pickle import load, dump
 
-
 # utility functions for loading/storing corpuses from/to text files, examining corpus contents (for debugging), etc.
 
 # pass arbitrary number of positional arguments. will load each of them into dict entry with their name and return the dict
 # if num is not None, then will only load the first <num> lines of each corpus, starting from <_start>
 
 # startpoint uses 1-based idxing (to match unix line numbering)
-def read_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/iwslt16_en_de/', prefix='', _start=1, num=None):
+def read_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
     corpuses = {}
     for corpus_name in corpus_names:
         corpuses[corpus_name] = read_corpus(corpus_name, path, prefix, _start, num)
@@ -16,8 +15,8 @@ def read_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/iwslt16_en_d
 
 
 # read lines <start> thru <start> + <num> of corpus at text file 
-def read_corpus(corpus_name, path='/content/gdrive/My Drive/NMT/iwslt16_en_de/', prefix='', _start=1, num=None):
-    assert prefix in ['', 'word_', 'subword_joint_', 'subword_ind']
+def read_corpus(corpus_name, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
+    assert prefix in ['', 'word_', 'subword_joint_', 'subword_ind_']
     with open(path + prefix + corpus_name, mode='rt', encoding='utf-8') as f:
         corpus = f.read().strip().split('\n')
         upper = num if num is not None else len(corpus)
@@ -32,15 +31,13 @@ def read_corpus(corpus_name, path='/content/gdrive/My Drive/NMT/iwslt16_en_de/',
 # each corpus in corpuses is expected to be tokenized, at the very least (List[List[str]])
 # write each corpus inside corpuses to a text file.
 # !!!change this spec so that joins sentences prior to calling, so corpus is list of str(sentence)'s
-def write_corpuses(corpuses, path='/content/gdrive/My Drive/NMT/iwslt16_en_de/', prefix='', _start=1, num=None, delim='\n'):
+def write_corpuses(corpuses, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
     for corpus_name in corpuses:
-        write_corpus(corpus_name, corpuses[corpus_name], path, prefix, _start, num, delim)
+        write_corpus(corpus_name, corpuses[corpus_name], path, prefix, _start, num)
 
 
-# e.g., if delim='\n', sentences placed on contiguous lines, 
-# or if delim='\n\n', sentences separated by blank lines (to meet stanza tokenizer spec) 
-def write_corpus(corpus_name, corpus, path='/content/gdrive/My Drive/NMT/iwslt16_en_de/', prefix='', _start=1, num=None):
-    assert prefix in ['', 'decased_', 'bpe_', 'tok_']
+def write_corpus(corpus_name, corpus, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
+    assert prefix in ['', 'word_', 'subword_joint_', 'subword_ind_']
     upper = num if num is not None else len(corpus)
     start = _start-1 # convert to 0-based idxing
     with open(path + prefix + corpus_name, mode='wt', encoding='utf-8') as f:
@@ -50,12 +47,11 @@ def write_corpus(corpus_name, corpus, path='/content/gdrive/My Drive/NMT/iwslt16
 
 
 # wrapper function that reads and white-space splits a pre-tokenized corpus stored in a file.
-def read_tokenized_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/iwslt16_en_de/', prefix=''):
-    corpuses = read_corpuses(*corpus_names, path, prefix)
+def read_tokenized_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix=''):
+    corpuses = read_corpuses(*corpus_names, path=path, prefix=prefix)
     tokenize_corpuses(corpuses)
-    ref_corpuses = get_references(corpuses) # for estimating model quality after each epoch using corpus_bleu
     
-    return corpuses, ref_corpuses
+    return corpuses
 
 
 def tokenize_corpuses(corpuses):
@@ -76,14 +72,17 @@ def tokenize_corpus(corpus):
 # where middle list is a singleton.
 # (bc I only ever provide a single reference translation for
 # any given source sentence). 
-def get_references(corpuses, num_overfit=10):
-    ref_corpuses = {}
-    # for debugging/overfitting to first <num_overfit> sentences of trainset:
-    ref_corpuses["train.en"] = [[target_sent] for target_sent in corpuses["train.en"][:num_overfit]]
 
-    # for actual dev set:
-    ref_corpuses["dev.en"] = [[target_sent] for target_sent in corpuses["dev.en"]]
-    
+# this version of references requires same tokenization
+def get_references(path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', overfit=False):
+    ref_corpuses = {}
+    if not overfit:
+        # only one set of references, so construct singleton list of lists of sentences
+        ref_corpuses["dev.en"] = [read_corpus("dev.en", path=path)]
+        #ref_corpuses["test.en"] = [read_corpus("test.en", path=path)]
+    else:
+        ref_corpuses["train.en"] = [read_corpus("train.en", path=path, num=10)]
+
     return ref_corpuses
 
 
@@ -93,31 +92,34 @@ def is_src_corpus(corpus_name, src_corpus_suffix="de"):
 
 
 # print out first <num> sentences of each corpus
-def print_corpuses(corpuses, num=5):
+def print_corpuses(corpuses, num=None):
     for corpus_name in corpuses:
         print(corpus_name)
         print_corpus(corpuses[corpus_name], num)
     
 
-def print_corpus(corpus, num=5):
-    for sent in corpus[:num]:
+def print_corpus(corpus, num=None):
+    upper = num if num is not None else len(corpus)
+    for sent in corpus[:upper]:
         print(sent)
     print()
 
 
 # prints the morphological data associated with each word of each sentence.
 # designed for printing output of stanza processors.
-def print_processed_corpuses(corpuses, num=5):
+def print_processed_corpuses(corpuses, num=None):
     for corpus_name in corpuses:
         print(corpus_name)
         print_processed_corpus(corpuses[corpus_name], num)
 
 
 # each corpus is a stanza Document object.
-def print_processed_corpus(doc, num=5):
-    for i, sent in enumerate(doc.sentences[:num]):
+def print_processed_corpus(doc, num=None):
+    upper = num if num is not None else len(doc.sentences)
+    for i, sent in enumerate(doc.sentences[:upper]):
         print(f"####### sentence {i+1}: #######")
         for word in sent.words: 
             print(f'word: {word.text}\t\tupos: {word.upos}\txpos: {word.xpos}')
         print("###############################")
+    print()
     print()

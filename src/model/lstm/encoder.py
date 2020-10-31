@@ -16,10 +16,11 @@ class Encoder(nn.Module):
         self.dropout = hyperparams["enc_dropout"]
         self.bidirectional = hyperparams["bidirectional"]
         self.reverse_src = hyperparams["reverse_src"]
+        self.device = hyperparams["device"]
         if hyperparams["decoder_init_scheme"] == "layer_to_layer":
-            self.initialize_decoder_state = layer_to_layer_initializer
+            self.initialize_decoder_state = self.layer_to_layer_initializer
         elif hyperparams["decoder_init_scheme"] == "final_to_first":
-            self.initialize_decoder_state = final_to_first_initializer
+            self.initialize_decoder_state = self.final_to_first_initializer
         else:
             raise NameError(f"specified an unsupported decoder init scheme: {hyperparams['decoder_init_scheme']}")
 
@@ -84,8 +85,8 @@ class Encoder(nn.Module):
     # (all non-first decoder hidden layers initialized as zeros)
     def final_to_first_initializer(self, hn, cn):
         # for now, assumes encoder and decoder lstms have same num_layers.
-        initial_h = torch.zeros(self.num_layers, hn.size(1), self.hidden_size)
-        initial_c = torch.zeros(self.num_layers, cn.size(1), self.hidden_size)
+        initial_h = torch.zeros(self.num_layers, hn.size(1), self.hidden_size, device=self.device)
+        initial_c = torch.zeros(self.num_layers, cn.size(1), self.hidden_size, device=self.device)
         if not self.bidirectional:
             top_layer_h, top_layer_c = hn[-1], cn[-1]
             # -> each is bsz x hidden_size

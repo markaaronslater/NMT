@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from encoder import Encoder
-from decoder import Decoder
+from NMT.src.model.lstm.encoder import Encoder
+from NMT.src.model.lstm.decoder import Decoder
 
 
 class EncoderDecoder(nn.Module):

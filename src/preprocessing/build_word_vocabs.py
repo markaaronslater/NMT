@@ -3,22 +3,10 @@ from collections import Counter
 # on the src and trg train corpuses, that uses some trim function so
 # that all words that do not fit in the vocabulary will be replaced in the
 # corpus by the unknown token, <unk>.
-# and then replaces each word with its index in its corresponding vocab
-# corpuses is List[List[str]], where each sentence is List[str] (i.e., they are already tokenized).
-# to build a higher quality vocab, they should also be intelligently decased so that, e.g., do not produce 2 entries for 'Hey' and 'hey', just bc occurred at beginning of some sentence, quotation, etc.
-#??change so uses closures??
-
-# vocab_params = {vocab_type:"word",
-#                 trim_type:"top_k",
-#                 src_k:30000,
-#                 trg_k:30000,
-#                 src_thres:2,
-#                 trg_thres:2 # ??need store anything for subword vocabs??
-#                 }
 def build_word_vocabs(corpuses, hyperparams):
     src_counter, trg_counter = get_train_word_counts(corpuses)
     if hyperparams["trim_type"] == "top_k":
-        src_vocab_words, trg_vocab_words = trim_vocab_by_topk(src_counter, trg_counter, hyperparams["src_k"], hyperparams["trg_k"])
+        src_vocab_words, trg_vocab_words = trim_vocabs_by_topk(src_counter, trg_counter, hyperparams["src_k"], hyperparams["trg_k"])
     elif hyperparams["trim_type"] == "threshold":
         src_vocab_words, trg_vocab_words = trim_vocabs_by_thres(src_counter, trg_counter, hyperparams["src_thres"], hyperparams["trg_thres"])
 

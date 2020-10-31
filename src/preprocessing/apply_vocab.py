@@ -1,4 +1,3 @@
-
 # inputs: have already built the vocabs, so replace each word of corpus with the idx it maps to in the vocab.
 # corpuses: List[List[str]]
 # (already has sos and eos tags)
@@ -14,10 +13,11 @@ def apply_vocab(corpuses, vocabs, vocab_type="word"):
 def replace_with_unk_tokens(corpuses, src_vocab, trg_vocab):     
     removeOOV(corpuses["train.de"], src_vocab)    
     removeOOV(corpuses["train.en"], trg_vocab)
-    # next 2 are no-ops if these corpuses dne (e.g., when debugging):    
-    removeOOV(corpuses["dev.de"], src_vocab)  
+    if "dev.de" in corpuses:
+        removeOOV(corpuses["dev.de"], src_vocab) 
+    if "test.de" in corpuses:
+        removeOOV(corpuses["test.de"], src_vocab)
     # (do not replace dev or test targets with unk) 
-    removeOOV(corpuses["test.de"], src_vocab)
 
 
 # for each word, if it does not belong to the trimmed vocabulary (it is an Out-Of-Vocabulary word), replace it with the 'unknown' token
@@ -29,9 +29,10 @@ def removeOOV(sentences, vocab):
 def replace_with_indices(corpuses, vocabs):
     to_indices(corpuses["train.de"], vocabs["src_word_to_idx"])
     to_indices(corpuses["train.en"], vocabs["trg_word_to_idx"])
-    to_indices(corpuses["dev.de"], vocabs["src_word_to_idx"])   
-    to_indices(corpuses["test.de"], vocabs["src_word_to_idx"])
-
+    if "dev.de" in corpuses:
+        to_indices(corpuses["dev.de"], vocabs["src_word_to_idx"])   
+    if "test.de" in corpuses:
+        to_indices(corpuses["test.de"], vocabs["src_word_to_idx"])
 
 
 # except clause catches OOV symbols in src dev/test sets when using subword vocabs.

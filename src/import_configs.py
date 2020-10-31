@@ -5,21 +5,22 @@
 # bidirectional_encoder=True
 # enc_hidden_size=500
 # ...
-def read_configs(config_path='/content/gdrive/My Drive/NMT/configs/'):
-    #!!!TODO: make so that all stored in single config file
-    config_files = ["encoder.txt", "decoder.txt", "train.txt", "vocab.txt"]
-
+def import_configs(config_path='/content/gdrive/My Drive/NMT/configs/'):
     hyperparams = {}
-    for config_file in config_files:
-        read_config(config_path + config_file, hyperparams)
-        
+    read_configs(hyperparams, config_path)
     process_configs(hyperparams)
     constrain_configs(hyperparams)
 
     return hyperparams
 
 
-def read_config(config_file, hyperparams):
+def read_configs(hyperparams, config_path='/content/gdrive/My Drive/NMT/configs/'):
+    #!!!TODO: make so that all stored in single config file
+    for config_file in ["encoder.txt", "decoder.txt", "train.txt", "vocab.txt"]:
+        read_config(hyperparams, config_path + config_file)
+
+
+def read_config(hyperparams, config_file):
     with open(config_file, 'rt') as f:
         hp_name_val_pairs = f.read().strip().split('\n')
         for name_val in hp_name_val_pairs:
@@ -32,30 +33,31 @@ def read_config(config_file, hyperparams):
 def process_configs(hyperparams):
     # string-type hyperparams
     assert hyperparams["device"] in ["cuda:0", "cpu"]
+    assert hyperparams["optimization_alg"] in ["Adam", "AdamW"]
+    assert hyperparams["decoder_init_scheme"] in ["layer_to_layer", "final_to_first"]
     assert hyperparams["attention_fn"] in ["dot_product", "scaled_dot_product", "none"] 
-    assert hyperparams["inference_alg"] in ["beam_search", "greedy_search"]
     assert hyperparams["vocab_type"] in ["subword_ind", "subword_joint", "subword_pos", "word"]
     assert hyperparams["trim_type"] in ["threshold", "top_k"]
-    assert hyperparams["optimizer"] in ["Adam", "AdamW"]
-    assert hyperparams["decoder_init_scheme"] in ["layer_to_layer", "final_to_first"]
 
     # ensure every setting provided for integer-valued hyperparams is castable as int.
-    int_hyperparams =   [   "num_epochs", "train_bsz", "dev_bsz", "test_bsz", 
+    int_hyperparams =   [   "total_epochs", "train_bsz", "dev_bsz", "test_bsz",
+                            "early_stopping_threshold", 
                             "enc_input_size", "enc_hidden_size", "enc_num_layers",
                             "dec_input_size", "dec_hidden_size", "dec_num_layers",
                             "beam_width", "decode_slack", 
-                            "src_k", "trg_k", "src_thres", "trg_thres"]
+                            "src_k", "trg_k", "src_thres", "trg_thres",
+                            "vocab_threshold", "num_merge_ops"]
     for hp in int_hyperparams:
         if hyperparams[hp].isdigit():
             hyperparams[hp] = int(hyperparams[hp])
         else:
             raise ValueError(f"error: provided a non-integer value for {hp}: {hyperparams[hp]}. see readme for proper input formats.")
 
-    bool_hyperparams = [    "early_stopping", "bidirectional", "project",
+    bool_hyperparams = [    "early_stopping", "from_scratch", "bidirectional", "project",
                             "reverse_src", "tie_weights", "attention_layer"]
     for hp in bool_hyperparams:
         if hyperparams[hp] in ["True", "False"]:
-            hyperparams[hp] = bool(hyperparams[hp])
+            hyperparams[hp] = True if hyperparams[hp] == "True" else False
         else:
             raise ValueError(f"error: provided a non-boolean value for {hp}: {hyperparams[hp]}. see readme for proper input formats.")
 

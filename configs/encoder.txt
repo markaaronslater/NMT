@@ -1,4 +1,5 @@
 bidirectional=True
+project=True
 reverse_src=False
 decoder_init_scheme=layer_to_layer
 enc_input_size=300

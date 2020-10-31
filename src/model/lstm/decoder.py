@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-from beam_search_utils import initialize_beams, expand_beams, update_beams, write_finished_translations
+from NMT.src.model.lstm.beam_search_utils import initialize_beams, expand_beams, update_beams, write_finished_translations
 
 class Decoder(nn.Module):
-    def __init__(self, hyperparams):
+    def __init__(self, hyperparams, inference_alg="greedy_search"):
         super(Decoder, self).__init__()
         self.sos_idx = hyperparams["sos_idx"]
         self.eos_idx = hyperparams["eos_idx"]
@@ -19,25 +19,21 @@ class Decoder(nn.Module):
         self.dropout = hyperparams["dec_dropout"]
         self.project_att_states = hyperparams["attention_layer"]
         self.attention = hyperparams["attention_fn"] != "none"
-        self.inference_alg = hyperparams["inference_alg"]
+        self.device = hyperparams["device"]
+
         # # only project hidden state with intermediate layer if use attention mechanism
         # assert (self.attention or not self.project_att_states)
 
         if self.attention:
             if hyperparams["attention_fn"] == "dot_product":
-                self.attend = dot_product_attn
+                self.attend = self.dot_product_attn
             elif hyperparams["attention_fn"] == "scaled_dot_product":
-                self.attend = scaled_dot_product_attn
+                self.attend = self.scaled_dot_product_attn
             else:
                 raise NameError(f"specified an unsupported attention mechanism: {hyperparams['attention_fn']}")
-            
-        if self.inference_alg == "beam_search": 
-            self.predict = beam_search_translate
-        elif self.inference_alg == "greedy_search": 
-            self.predict = greedy_search_translate
-        else:
-            raise NameError(f"specified an unsupported inference algorithm: {hyperparams['inference_alg']}")
-
+        
+        self.inference_alg = inference_alg
+        self.set_inference_alg(inference_alg)
         self.beam_width = hyperparams["beam_width"]
         self.decode_slack = hyperparams["decode_slack"]
 
@@ -69,7 +65,7 @@ class Decoder(nn.Module):
     # -> can pass entire ground-truth trg sentence at once, so uses PackedSequences.
     # (inference and training fwd passes therefore handled separately).
     def forward(self, decoder_inputs, encoder_states, initial_state):
-        if not self.train:
+        if not self.training:
             return self.predict(decoder_inputs, encoder_states, initial_state)
         else:
             embs = self.embed(decoder_inputs["in"]) # (bsz x max_trg_len x input_size)
@@ -122,13 +118,24 @@ class Decoder(nn.Module):
         return attentional_states
 
 
-    def scaled_dot_product_attn():
+    def scaled_dot_product_attn(self):
         pass
+
+
+    def set_inference_alg(self, inference_alg="greedy_search"):
+        if inference_alg == "beam_search": 
+            self.predict = self.beam_search_translate
+        elif inference_alg == "greedy_search": 
+            self.predict = self.greedy_search_translate
+        else:
+            raise NameError(f"tried to set an unsupported inference algorithm: {inference_alg}. see readme for valid inference_alg options.")
+
 
 
     # applied to multiple sequences in parallel, for each of which it predicts entire beam in parallel.
     # each beam's sequences maintained in descending order by likelihood.
     def beam_search_translate(self, decoder_inputs, encoder_states, initial_state):
+        print("starting beam search...")
         bsz = encoder_states.size(0) # batch size
         b = self.beam_width
         # hyperparameters to be referenced in util functions
@@ -138,17 +145,17 @@ class Decoder(nn.Module):
                 "d_hid":self.hidden_size,
                 "v":self.vocab_size
              }
-        eos = torch.tensor([self.eos_idx], dtype=torch.long)
+        eos = torch.tensor([self.eos_idx], dtype=torch.long, device=self.device)
         T = decoder_inputs["max_src_len"] + self.decode_slack # max number of decoder time steps
         # whenever a beam's most probable sequence produces eos for the first time, copy it to corresponding row of translation
-        translation = torch.zeros((bsz, T), dtype=torch.long)
+        translation = torch.zeros((bsz, T), dtype=torch.long, device=self.device)
         # stop decoding when the most likely sequence of each beam has predicted the eos token.
-        finished = torch.zeros((bsz,), dtype=torch.bool) # entry j is 1 if have finished translating sentence j
+        finished = torch.zeros((bsz,), dtype=torch.bool, device=self.device) # entry j is 1 if have finished translating sentence j
 
         # handle timestep 1 separately from the rest, bc initializes the beams 
         # (employs a beam_width of 1, rather than b), each of which was produced
         # by its src sequence's final hidden state.
-        sos_tokens = torch.full((bsz, 1), self.sos_idx, dtype=torch.long)
+        sos_tokens = torch.full((bsz, 1), self.sos_idx, dtype=torch.long, device=self.device)
         input_0 = self.embed(sos_tokens) # (bsz x 1 x input_size)
         h_0, c_0 = initial_state
         dists_1, (h_1, c_1) = self.decode_step(input_0, (h_0, c_0), decoder_inputs["mask"], encoder_states) 
@@ -201,15 +208,16 @@ class Decoder(nn.Module):
     # (decode_slack is used to cut off translations that might otherwise never end).
     # returns (bsz x T) tensor, where T is number of decode time steps (at least 1, and at most max_src_len + decode_slack), holding the batch of predicted translations.
     def greedy_search_translate(self, decoder_inputs, encoder_states, initial_state):
+        print("starting greedy search...")
         bsz = encoder_states.size(0)
-        eos = torch.tensor([self.eos_idx], dtype=torch.long)
+        eos = torch.tensor([self.eos_idx], dtype=torch.long, device=self.device)
         T = decoder_inputs["max_src_len"] + self.decode_slack # max number of decoder time steps
 
-        decoder_in = torch.full((bsz, 1), self.sos_idx, dtype=torch.long) # (bsz x 1)
+        decoder_in = torch.full((bsz, 1), self.sos_idx, dtype=torch.long, device=self.device) # (bsz x 1)
         # initialize running translation (each decode step concatenates to it)
-        translation = torch.tensor([], dtype=torch.long)
+        translation = torch.tensor([], dtype=torch.long, device=self.device)
         # stop decoding when every sentence has predicted the eos token.
-        finished = torch.zeros((bsz,), dtype=torch.bool)
+        finished = torch.zeros((bsz,), dtype=torch.bool, device=self.device)
         # -> entry j is 1 if have finished translating sentence j
 
         input_i = self.embed(decoder_in) # (bsz x 1 x input_size)
@@ -217,6 +225,7 @@ class Decoder(nn.Module):
         # iter i takes sequences of length i and extends them to length i+1.
         for i in range(T): 
             dists_i, (h_i, c_i) = self.decode_step(input_i, (h_i, c_i), decoder_inputs["mask"], encoder_states)
+            #print(dists_i)
             # greedy: take argmax to get position of each dist containing highest score
             preds_i = torch.argmax(dists_i, 1).unsqueeze(1) # (bsz x 1)
             # concat to the running translations for each seq of the batch
@@ -236,10 +245,10 @@ class Decoder(nn.Module):
     def decode_step(self, input_i, hidden, mask, encoder_states):
         output_i, (h_i, c_i) = self.lstm(input_i, hidden) # output_i is (bsz x 1 x hidden_size)
         if self.attention:
-            attentional_states_i = self.attend(output_i, encoder_states, mask).squeeze()
+            attentional_states_i = self.attend(output_i, encoder_states, mask).squeeze(1)
             # -> (bsz x 2*hidden_size)
         else:
-            attentional_states_i = output_i.squeeze() # (bsz x hidden_size)
+            attentional_states_i = output_i.squeeze(1) # (bsz x hidden_size)
         if self.project_att_states:
             attentional_states_i = F.tanh(self.attention_layer(attentional_states_i)) 
 

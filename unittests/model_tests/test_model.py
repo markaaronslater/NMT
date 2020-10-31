@@ -1,11 +1,8 @@
 import pytest # so can use pytest.raises() method
 
-from encoderdecoder import x
 
 
 
-# neural network correctness tests: unregularized model of sufficient capacity can overfit first 10 sentences of training set.
-###!!!remember to set decode slack very high
 
 # combos to test:
 # unidirectional encoder, no attention
@@ -18,12 +15,13 @@ from encoderdecoder import x
 
 # dot_product_attn
 # scaled_dot_product_attn
+# -> ensure produces exact expected result with allclose()
 
 # apply attention_layer that projects attentional representations back to original hidden_size before projecting to vocab size
 # directly project attentional representations to vocab size
 
 # tie-weights = true
-# tie-wieghts = false
+# tie-weights = false
 
 # word vocab thresholded
 # word vocab top_k
@@ -37,8 +35,20 @@ from encoderdecoder import x
 # early stopping
 # storing and loading
 
+# ensure works on both gpu and cpu
+
+# neural network correctness tests:
+# unregularized model of sufficient capacity can overfit first 10 sentences
+# of training set.
 # 1-achieve ~zero loss on first 10 sentences of training set
-# ??should i use sum instead of mean loss, so can more easily observe whether loss is decreasing??
+# -use sum instead of mean loss, so can more easily observe loss converging to zero.
+# -if using word-level vocab, ensure there are no <unk> tokens (can use thres=1),
+# otherwise bleu score will not reach 1.
+# -make sure dropout is turned off?
+# -remember to set decode slack very high
+# -probably should turn off early stopping, and test that separately...
+# -ensure model is of sufficient capacity
+
 trainBatches = getBatches(trainingPairs[:10], 10, device)
 devBatches = getDevBatches(corpuses["train.de"][:10], 10, device)
 

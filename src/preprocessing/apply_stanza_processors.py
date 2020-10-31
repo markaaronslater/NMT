@@ -1,7 +1,7 @@
 from pickle import load, dump
 import stanza
 
-from corpus_utils import is_src_corpus
+from NMT.src.preprocessing.corpus_utils import is_src_corpus
 
 # use stanfordnlp processor to perform
 # -tokenization,
@@ -17,13 +17,13 @@ from corpus_utils import is_src_corpus
 def apply_stanza_processors(*corpus_names,
                             path='/content/gdrive/My Drive/NMT/iwslt16_en_de/',
                             src_lang="de", trg_lang="en", _start=1, num=None):
-    stanza.download(src_lang)
-    stanza.download(trg_lang)
+    stanza.download(lang=src_lang, processors='tokenize,mwt,pos')
+    stanza.download(lang=trg_lang, processors='tokenize,pos')
 
     # only need download specific processors (tokenize,mwt,pos). 
-    # (requires ~157M rathan than ~607M per lang).
+    # (requires ~157M rather than ~607M per lang).
     src_processor = stanza.Pipeline(lang=src_lang, processors='tokenize,mwt,pos', tokenize_no_ssplit=True)
-    trg_processor = stanza.Pipeline(lang=trg_lang, processors='tokenize,mwt,pos', tokenize_no_ssplit=True)
+    trg_processor = stanza.Pipeline(lang=trg_lang, processors='tokenize,pos', tokenize_no_ssplit=True)
 
     for corpus_name in corpus_names:
         with open(path + corpus_name, mode='rt', encoding='utf-8') as f:

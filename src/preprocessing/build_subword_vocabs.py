@@ -1,4 +1,5 @@
-def build_subword_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file):
+def build_subword_vocabs(corpus_path, vocab_type, vocab_threshold,
+                            src_vocab_file, trg_vocab_file):
     if vocab_type == "subword_ind":
         vocabs = build_subword_ind_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file)
     elif vocab_type == "subword_joint":
@@ -7,8 +8,9 @@ def build_subword_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_fil
 
 # in this context, "word" can refer to word, subword, or single character.
 # (named this way for consistency with word-level vocab).
-def build_subword_ind_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file):
-    src_vocab = {'<pad>':0, '<sos>':1, '<eos>':2} 
+def build_subword_ind_vocabs(corpus_path, vocab_type, vocab_threshold,
+                            src_vocab_file, trg_vocab_file):
+    src_vocab = {'<pad>':0} 
     get_vocab_mapping(src_vocab, corpus_path + src_vocab_file, vocab_threshold)
     trg_vocab = {'<pad>':0, '<sos>':1, '<eos>':2}
     get_vocab_mapping(trg_vocab, corpus_path + trg_vocab_file, vocab_threshold)
@@ -20,7 +22,8 @@ def build_subword_ind_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab
             }
 
 
-def build_subword_joint_vocabs(corpus_path, vocab_type, vocab_threshold, src_vocab_file, trg_vocab_file):
+def build_subword_joint_vocabs(corpus_path, vocab_type, vocab_threshold,
+                                src_vocab_file, trg_vocab_file):
     vocab = {'<pad>':0, '<sos>':1, '<eos>':2}
     get_vocab_mapping(vocab, corpus_path + src_vocab_file, vocab_threshold)
     get_vocab_mapping(vocab, corpus_path + trg_vocab_file, vocab_threshold)

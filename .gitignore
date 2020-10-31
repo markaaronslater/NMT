@@ -1,8 +1,7 @@
-.DS_Store
 .ipynb_checkpoints/
-__pycache__/
-code/.DS_Store
-code/__pycache__/
-iwslt16_en_de/
+**/.DS_Store
+**/__pycache__/
 *.[Jj][Pp][Ee][Gg]
 *.[Jj][Pp][Gg]
+data/
+checkpoints/

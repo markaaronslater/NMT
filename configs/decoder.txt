@@ -1,7 +1,6 @@
 tie_weights=False
 attention_fn=dot_product
 attention_layer=False
-inference_alg=beam_search
 beam_width=10
 decode_slack=20
 dec_input_size=300

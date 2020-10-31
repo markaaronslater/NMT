@@ -8,23 +8,35 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 # convert all train/dev/test data into padded batches of tensors.
 # test batches predicted with beam search, which forms 4D tensors of size (bsz x num_layers x beam_width x hidden_size), so use relatively smaller bsz, e.g., 16.
 # to improve training speed, dev batches predicted after each epoch with greedy search, so can use larger bsz, e.g., 32.
-def get_batches(corpuses, train_bsz=64, dev_bsz=32, test_bsz=16, device="cuda:0"):
+def get_batches(corpuses, train_bsz=64, dev_bsz=32, test_bsz=16, device="cuda:0", overfit=False):
     # train_batches is a list of (encoder_inputs, decoder_inputs, decoder_targets) triples
+    start_time = time.time()
     train_batches = get_train_batches(corpuses["train.de"], corpuses["train.en"], train_bsz, device)
+    print(f"took {time.time()-start_time} seconds to produce train batches")
 
     # dev_batches and test_batches each use same type of batch.
     # dev_batches is a list of (encoder_inputs, decoder_inputs, corpus_indices) triples
-    dev_batches = get_test_batches(corpuses["dev.de"], dev_bsz, device)
-    test_batches = get_test_batches(corpuses["test.de"], test_bsz, device)
+    start_time = time.time()
+    # when unit testing, dev set consists of train sentences, bc goal
+    # is to overfit such that perfectly predicts sentences it trained on.
+    dev_batches = get_test_batches(corpuses["dev.de"], dev_bsz, device) if not overfit else get_test_batches(corpuses["train.de"], dev_bsz, device)
+    print(f"took {time.time()-start_time} seconds to produce dev batches")
+
+    start_time = time.time()
+    test_batches = get_test_batches(corpuses["test.de"], test_bsz, device) if not overfit else {} # when unit testing with toy corpuses, there is no test set
+    print(f"took {time.time()-start_time} seconds to produce test batches")
+
     return train_batches, dev_batches, test_batches
 
 
 def get_train_batches(src_sentences, trg_sentences, bsz, device):
-    start_time = time.time()
-    # sort each src_sentence, trg_sentence pair ahead of time (arbitrarily chose to sort by trg length) for intelligent batching (most sequences within a batch are same length, minimizing number of pad tokens):
-    training_pairs = sorted(list(zip(src_sentences, trg_sentences), key = lambda pair: len(pair[1]), reverse=True))
+    # sort each src_sentence, trg_sentence pair ahead of time
+    # (arbitrarily chose to sort by trg length) for intelligent batching
+    # (most sequences within a batch are same length,
+    # minimizing number of pad tokens).
+    training_pairs = sorted(list(zip(src_sentences, trg_sentences)), key = lambda pair: len(pair[1]), reverse=True)
     train_batches = [get_train_batch(training_pairs[i:i+bsz], device) for i in range(0, len(training_pairs), bsz)]
-    print(f"took {time.time()-start_time} seconds to produce training batches")
+
     return train_batches
 
 
@@ -50,6 +62,7 @@ def get_train_batch(batch, device):
     padded_decoder_inputs = torch.zeros(bsz, max_trg_len, device=device).long() 
     padded_decoder_targets = torch.zeros(bsz, max_trg_len, device=device).long()
     for i in range(bsz):
+        # need to initialize with device??
         padded_encoder_inputs[i,:src_lengths[i]] = torch.tensor(encoder_inputs[i]).long()
         padded_decoder_inputs[i,:trg_lengths[i]] = torch.tensor(decoder_inputs[i]).long()
         padded_decoder_targets[i,:trg_lengths[i]] = torch.tensor(decoder_targets[i]).long()
@@ -77,7 +90,8 @@ def get_train_batch(batch, device):
     # -pass idxs in sorted encoder inputs, so can unsort the sequences after pass thru lstm, so that they line up with target sentences
     encoder_inputs = {
         "in":padded_encoder_inputs,
-        "sorted_lengths":sorted_src_lengths, "idxs_in_sorted":idxs_in_sorted_encoder_inputs
+        "sorted_lengths":sorted_src_lengths,
+        "idxs_in_sorted":idxs_in_sorted_encoder_inputs
     }
 
     decoder_inputs = {
@@ -94,16 +108,12 @@ def get_train_batch(batch, device):
 
 # use this same function for preparing dev and test batches
 def get_test_batches(src_sentences, bsz, device):
-    start_time = time.time()
     test_triples = [(idx, len(sent), sent) for idx, sent in enumerate(src_sentences)]
-
     # sort by src_length here bc there are no targets during inference (maybe was confusing that I sorted training pairs by TARGET length).
     # this allows us to intelligently batch so that can minimize number of pad tokens when decoding a batch of src sentences during inference, and maximize likelihood that each predicted translation of batch requires similar number of decoding steps, e.g., so that entire batch of translations is never "held up", by one outlier target sentence of many words.
     # keeps track of orig index in corpus so can later "unsort".
     test_triples = sorted(test_triples, key = lambda triple: triple[1], reverse=True)
-
     test_batches = [get_test_batch(test_triples[i:i+bsz], device) for i in range(0, len(src_sentences), bsz)]
-    print(f"took {time.time()-start_time} seconds to produce dev batches")
 
     return test_batches
 
@@ -138,7 +148,8 @@ def get_test_batch(batch, device):
 
     encoder_inputs = {
         "in":padded_encoder_inputs,
-        "sorted_lengths":sorted_src_lengths, "idxs_in_sorted":idxs_in_sorted_encoder_inputs
+        "sorted_lengths":sorted_src_lengths,
+        "idxs_in_sorted":idxs_in_sorted_encoder_inputs
     }
 
     # max_src_len is used by decoder, along with decode_slack, to heuristically decide when to stop decoding, if an end-of-sentence symbol is not produced "early enough"
