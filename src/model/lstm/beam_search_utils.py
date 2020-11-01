@@ -45,11 +45,12 @@ def expand_beams(dists_i, seq_likelihoods, hp):
 
 
 # select the best sequences of the beams, orient them with the hidden states that produced them, and prepare corresponding inputs for next decode timestep.
-def update_beams(sequences, next_words, top_candidates, timestep, hp):
+def update_beams(sequences, next_words, top_candidates, hidden_i, timestep, hp):
     bsz = hp["bsz"]
     b = hp["b"]
     nl = hp["nl"]
     d_hid = hp["d_hid"]
+    h_i, c_i = hidden_i
 
     # update sequences
     seq_indices = (top_candidates // b).unsqueeze(2).expand(-1,-1,timestep-1).contiguous() # (bsz x b x (i-1))
@@ -73,14 +74,19 @@ def update_beams(sequences, next_words, top_candidates, timestep, hp):
 def write_finished_translations(translation, sequences, finished, eos, timestep):
     # termination condition: most probable seq produced by beam ends in eos.
     predicted_eos = sequences[:, 0, -1] == eos
+    #print(f"predicted_eos: {predicted_eos}")
     # -> (bsz, ) booltensor containing a 1 for the sequences whose beams
     # just produced sequence ending in eos as their most likely sequence.
     just_finished = (finished.logical_not()).logical_and(predicted_eos)
+    #print(f"just_finished: {just_finished}")
     # entry j is True if seq j finished being translated this timestep.
     # obtain indices to extract the sequences that just finished.
-    just_finished_indices = torch.nonzero(just_finished).squeeze() # (num_just_finished, )
+    just_finished_indices = torch.nonzero(just_finished, as_tuple=False).squeeze(1) # (num_just_finished, )
+    #print(f"just_finished_indices: {just_finished_indices}")
     # (this loop and the exit loop together run a total of <bsz> iterations,
     # so implementation is still fully vectorized).
+    #if just_finished_indices.numel(): # ensure not 0-d before iterating over it
+    #print(just_finished_indices)
     for j in just_finished_indices:
         translation[j,:timestep] = sequences[j][0]
 

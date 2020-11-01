@@ -45,7 +45,7 @@ class Encoder(nn.Module):
 
         if self.bidirectional:
             # project encoder_states back to decoder_hidden_size, so can apply attention
-            encoder_states = F.tanh(self.project_keys(encoder_states)) 
+            encoder_states = torch.tanh(self.project_keys(encoder_states)) 
 
         # unsorting step:
         #!!!change so that only needs to do this when in train mode.
@@ -74,8 +74,8 @@ class Encoder(nn.Module):
             # -> each is num_layers x bsz x 2*hidden_size
 
             # project back to hidden_size.
-            initial_h = F.tanh(self.bridge(initial_h)) 
-            initial_c = F.tanh(self.bridge(initial_c)) 
+            initial_h = torch.tanh(self.bridge(initial_h)) 
+            initial_c = torch.tanh(self.bridge(initial_c)) 
             # -> each is num_layers x bsz x hidden_size
 
         return initial_h, initial_c
@@ -103,8 +103,8 @@ class Encoder(nn.Module):
             # -> each is bsz x 2*hidden_size
 
             # project back to hidden_size.
-            top_layer_h = F.tanh(self.bridge(top_layer_h)) 
-            top_layer_c = F.tanh(self.bridge(top_layer_c)) 
+            top_layer_h = torch.tanh(self.bridge(top_layer_h)) 
+            top_layer_c = torch.tanh(self.bridge(top_layer_c)) 
             # -> each is bsz x hidden_size
 
         initial_h[0], initial_c[0] = top_layer_h, top_layer_c

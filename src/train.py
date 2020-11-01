@@ -32,8 +32,8 @@ from NMT.src.model.lstm.model import EncoderDecoder
 # can return the best model for later predicting the test set.
 def train(hyperparams, train_batches, dev_batches, dev_references,
         idx_to_trg_word, checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/',
-        save=True, reduction='mean'):
-    ce_loss = torch.nn.CrossEntropyLoss(reduction=reduction)
+        save=True):
+    ce_loss = torch.nn.CrossEntropyLoss()
     total_epochs = hyperparams["total_epochs"]
     from_scratch = hyperparams["from_scratch"]
     early_stopping = hyperparams["early_stopping"]

@@ -81,7 +81,7 @@ class Decoder(nn.Module):
 
             del packed_input, packed_output
             if self.project_att_states:
-                attentional_states = F.tanh(self.attention_layer(attentional_states)) # (total_len x hidden_size)
+                attentional_states = torch.tanh(self.attention_layer(attentional_states)) # (total_len x hidden_size)
             
             dists = self.out(attentional_states) # (total_len x vocab_size)
             # for each sequence of batch, for each time step, holds predicted logits over next words.
@@ -135,7 +135,6 @@ class Decoder(nn.Module):
     # applied to multiple sequences in parallel, for each of which it predicts entire beam in parallel.
     # each beam's sequences maintained in descending order by likelihood.
     def beam_search_translate(self, decoder_inputs, encoder_states, initial_state):
-        print("starting beam search...")
         bsz = encoder_states.size(0) # batch size
         b = self.beam_width
         # hyperparameters to be referenced in util functions
@@ -145,8 +144,10 @@ class Decoder(nn.Module):
                 "d_hid":self.hidden_size,
                 "v":self.vocab_size
              }
+        max_src_len = decoder_inputs["max_src_len"]
+        mask = decoder_inputs["mask"]
         eos = torch.tensor([self.eos_idx], dtype=torch.long, device=self.device)
-        T = decoder_inputs["max_src_len"] + self.decode_slack # max number of decoder time steps
+        T = max_src_len + self.decode_slack # max number of decoder time steps
         # whenever a beam's most probable sequence produces eos for the first time, copy it to corresponding row of translation
         translation = torch.zeros((bsz, T), dtype=torch.long, device=self.device)
         # stop decoding when the most likely sequence of each beam has predicted the eos token.
@@ -158,7 +159,7 @@ class Decoder(nn.Module):
         sos_tokens = torch.full((bsz, 1), self.sos_idx, dtype=torch.long, device=self.device)
         input_0 = self.embed(sos_tokens) # (bsz x 1 x input_size)
         h_0, c_0 = initial_state
-        dists_1, (h_1, c_1) = self.decode_step(input_0, (h_0, c_0), decoder_inputs["mask"], encoder_states) 
+        dists_1, (h_1, c_1) = self.decode_step(input_0, (h_0, c_0), mask, encoder_states) 
         # -> dists_1 is (bsz x v), h_1 and c_1 are (nl x bsz x hidden_size)
         sequences, seq_likelihoods, (h_i, c_i), top_words = initialize_beams(dists_1, (h_1, c_1), hp)
         input_i = self.embed(top_words.view(bsz*b, 1)) # (bsz*b x 1 x input_size)
@@ -169,13 +170,18 @@ class Decoder(nn.Module):
             return translation
         #########################
 
+
+        # for a given src_seq of batch, 
+        # the same (max_src_len x d_hid) encoder_states are attended to for
+        # each of the b sequences in the beam for the corresponding 
+        # trg sequence:
+        expanded_encoder_states = encoder_states.repeat(1,b,1).view(bsz*b,max_src_len,self.hidden_size)
+        expanded_mask = mask.repeat(1,b,1).view(bsz*b,1,max_src_len)
+
         # timesteps 2 and onward handled inside loop.
         # iter i takes sequences of length i-1 and extends them to length i.
         for i in range(2, T):
-            # the encoder states for a given source sequence in the batch must
-            # be repeated b times, so that can compute attention with
-            # hidden state for each target sequence in corresponding beam.
-            dists_i, (h_i, c_i) = self.decode_step(input_i, (h_i, c_i), decoder_inputs["mask"], encoder_states.repeat(1,b,1)) # (bsz*b x v)
+            dists_i, (h_i, c_i) = self.decode_step(input_i, (h_i, c_i), expanded_mask, expanded_encoder_states) # (bsz*b x v)
             # each of the b sequences of a beam generates b successors, providing b*b candidates for the next beam.
             candidate_likelihoods, top_words = expand_beams(dists_i, seq_likelihoods, hp)
             # identify the top b most likely of the b*b candidates.
@@ -184,7 +190,7 @@ class Decoder(nn.Module):
             next_words = torch.gather(top_words, 1, top_candidates) # words appended to beam sequences
             # fill beams in descending order with most likely sequences,
             # along with the hidden states that produced them.
-            sequences, (h_i, c_i) = update_beams(sequences, next_words, top_candidates, i, hp)
+            sequences, (h_i, c_i) = update_beams(sequences, next_words, top_candidates, (h_i, c_i), i, hp)
             # must write a translation as soon as it's finished, bc if
             # continue extending it, resulting sequence will be of extremely
             # low probability (words never follow <eos>) and therefore lost.
@@ -195,10 +201,12 @@ class Decoder(nn.Module):
             input_i = self.embed(next_words.view(bsz*b, 1)) # (bsz*b x 1 x input_size)
 
         # copy the translations whose beams never produced a most-likely sequence ending in eos.
-        never_finished_indices = torch.nonzero(finished.logical_not()).squeeze()# (num_never_finished, )
+        never_finished_indices = torch.nonzero(finished.logical_not(), as_tuple=False).squeeze(1)# (num_never_finished, )
+        #if never_finished_indices.numel(): # ensure not 0-d before iterating over it
+        #print(never_finished_indices)
         for j in never_finished_indices:
             translation[j,:i] = sequences[j][0]
-            
+                
         # translation now contains sequences with eos symbols. will extract the portion prior to the eos symbol inside postprocess.py
         return translation
 
@@ -208,7 +216,6 @@ class Decoder(nn.Module):
     # (decode_slack is used to cut off translations that might otherwise never end).
     # returns (bsz x T) tensor, where T is number of decode time steps (at least 1, and at most max_src_len + decode_slack), holding the batch of predicted translations.
     def greedy_search_translate(self, decoder_inputs, encoder_states, initial_state):
-        print("starting greedy search...")
         bsz = encoder_states.size(0)
         eos = torch.tensor([self.eos_idx], dtype=torch.long, device=self.device)
         T = decoder_inputs["max_src_len"] + self.decode_slack # max number of decoder time steps
@@ -250,7 +257,7 @@ class Decoder(nn.Module):
         else:
             attentional_states_i = output_i.squeeze(1) # (bsz x hidden_size)
         if self.project_att_states:
-            attentional_states_i = F.tanh(self.attention_layer(attentional_states_i)) 
+            attentional_states_i = torch.tanh(self.attention_layer(attentional_states_i)) 
 
         dists_i = self.out(attentional_states_i) # (bsz x vocab_size)
 
