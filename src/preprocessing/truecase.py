@@ -14,23 +14,13 @@ def truecase_corpuses(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_d
     write_corpuses(corpuses, path, 'word_') 
 
 
-# def decase_corpuses(corpuses, path='/content/gdrive/My Drive/iwslt16_en_de/'):
-#     for corpus_name in corpuses:
-#         if is_src_corpus(corpus_name):
-#             decase(corpus_name, corpuses, should_lower_de, path)  
-#         else:
-#             decase(corpus_name, corpuses, should_lower_en, path)
-
-#     # decased corpuses directly used by model employing vanilla word-level vocab.
-#     # (other vocab-types process the corpuses even further).
-#     write_corpuses(corpuses, path, 'word_') 
-
 # -before calling, corpuses is dict that maps each corpus name to a
 # stanza Document object corresponding to its entire stanza-processed corpus.
 # -after calling, corpuses is a dict that maps each corpus name to a list
 # of sentences in the corpus (where sentence is list of words),
 # where each sentence has been decased using linguistic heuristics that
 # leverage morphological data supplied by pos-tagger.
+# (this is more accurate than, e.g., the Moses truecaser).
 def truecase(corpus_name, corpuses, should_lower, path='/content/gdrive/My Drive/iwslt16_en_de/', _start=1, num=None):
     doc = corpuses[corpus_name]
     decased_corpus = []
@@ -44,19 +34,21 @@ def truecase(corpus_name, corpuses, should_lower, path='/content/gdrive/My Drive
     corpuses[corpus_name] = decased_corpus
 
 
-### the following should_be_lower() functions exploit domain knowledge about the given language for designing heuristics about whether or not to decase a given word. given a word, returns true if it should be decased.
+### the following should_be_lower() functions exploit domain knowledge about
+# the given language for designing heuristics about whether or not to decase
+# a given word. given a word, returns true if it should be decased.
 eos_symbols = {".", "!", "?", "\"", ":", "..", "...", "...."}
 # serve as "capitalization prefixes"
 # -> a token whose subsequent word ought to be capitalized for syntactic reason.
 
 # TODO: find better heuristic than this for distinguishing 'she/it' from 'they' from 'You':
-# if 'Sie' is at cap_location, it could either be 'she/it/they/You',
+# -if 'Sie' is at cap_location, it could either be 'she/it/they/You',
 # where 'You' is formal. stanfordnlp pos tagger trained on corpus that
 # uses automated labeling of number, plural, and gender, so treats every
 # instance of 'Sie' as if it were 3rd person plural, with no gender.
-# therefore, cannot use that info to distinguish 'You' (which should not
+# -therefore, cannot use that info to distinguish 'You' (which should not
 # be lower cased) from 'they', (which should be lower cased).
-# however, if means 'she/it', then will be singular, feminine, so could use
+# -however, if means 'she/it', then will be singular, feminine, so could use
 # that info to at least properly decase those senses.
 
 # -word and previous_word are each stanza Word objects.

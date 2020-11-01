@@ -2,11 +2,7 @@
 # arg1 - num_merge_ops
 # arg2 - vocab_threshold
 # arg3 - path to corpuses to be segmented
-echo "$1"
-echo "$2"
-echo "$3"
-echo " "
-echo "$3"word_train.de
+
 # learn bpe
 echo "learning joint bpe and vocab using $1 merge operations..."
 subword-nmt learn-joint-bpe-and-vocab --input "$3"word_train.de "$3"word_train.en -s "$1" -o "$3"bpe_codes --write-vocabulary "$3"vocab.de "$3"vocab.en

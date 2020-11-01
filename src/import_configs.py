@@ -65,7 +65,6 @@ def process_configs(hyperparams):
     for hp in float_hyperparams:
         # will raise ValueError on its own if passed non-numeric value.
         hyperparams[hp] = float(hyperparams[hp])
-        #raise ValueError(f"error: provided a value for {hp} that cannot cast to float: {hyperparams[hp]}. see readme for proper input formats.")
 
 
 # ensure passed valid combinations of configs

@@ -1,15 +1,11 @@
 import torch
 import torch.nn as nn
 import time
-
-#from nltk.translate.bleu_score import corpus_bleu
 import sacrebleu
 
 from NMT.src.postprocessing.postprocess import postprocess
 
-# this same function is also used for predicting the test set.
-# use greedy search if measuring model performance on dev set during training ( cheaper, and beam search will always perform at least as well anyway).
-# use "beam_search" if measuring model performance on test set after found a best model during training.
+
 def predict(model, test_batches, references, idx_to_trg_word, folder, ep='', write=True):
     with torch.no_grad():
         model.eval()

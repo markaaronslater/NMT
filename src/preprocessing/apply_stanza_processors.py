@@ -20,8 +20,6 @@ def apply_stanza_processors(*corpus_names,
     stanza.download(lang=src_lang, processors='tokenize,mwt,pos')
     stanza.download(lang=trg_lang, processors='tokenize,pos')
 
-    # only need download specific processors (tokenize,mwt,pos). 
-    # (requires ~157M rather than ~607M per lang).
     src_processor = stanza.Pipeline(lang=src_lang, processors='tokenize,mwt,pos', tokenize_no_ssplit=True)
     trg_processor = stanza.Pipeline(lang=trg_lang, processors='tokenize,pos', tokenize_no_ssplit=True)
 

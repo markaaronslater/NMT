@@ -1,11 +1,9 @@
 from pickle import load, dump
 
-# utility functions for loading/storing corpuses from/to text files, examining corpus contents (for debugging), etc.
+# utility functions for loading/storing corpuses from/to text files,
+# examining corpus contents, etc.
 
-# pass arbitrary number of positional arguments. will load each of them into dict entry with their name and return the dict
-# if num is not None, then will only load the first <num> lines of each corpus, starting from <_start>
 
-# startpoint uses 1-based idxing (to match unix line numbering)
 def read_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
     corpuses = {}
     for corpus_name in corpus_names:
@@ -14,7 +12,8 @@ def read_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/corpuses/iws
     return corpuses
 
 
-# read lines <start> thru <start> + <num> of corpus at text file 
+# read lines <_start> thru <start> + <num> of corpus at text file 
+# (<_start> uses 1-based idxing to match unix line numbering)
 def read_corpus(corpus_name, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
     assert prefix in ['', 'word_', 'subword_joint_', 'subword_ind_']
     with open(path + prefix + corpus_name, mode='rt', encoding='utf-8') as f:
@@ -25,12 +24,8 @@ def read_corpus(corpus_name, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16
     return corpus[start:start+upper]
 
 
-# prefix can be decased_ if decased
-# or bpe_ (if decased and word-split)
-# or even tok_ (if just segmented and tokenized) (haven't added support for this yet)
-# each corpus in corpuses is expected to be tokenized, at the very least (List[List[str]])
-# write each corpus inside corpuses to a text file.
-# !!!change this spec so that joins sentences prior to calling, so corpus is list of str(sentence)'s
+# used to create "checkpoints" in the preprocessing pipeline, where rather
+# than performing step again, can directly load preprocessed corpus.
 def write_corpuses(corpuses, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
     for corpus_name in corpuses:
         write_corpus(corpus_name, corpuses[corpus_name], path, prefix, _start, num)
@@ -46,7 +41,7 @@ def write_corpus(corpus_name, corpus, path='/content/gdrive/My Drive/NMT/corpuse
             f.write('\n')
 
 
-# wrapper function that reads and white-space splits a pre-tokenized corpus stored in a file.
+# reads and white-space splits a pre-tokenized corpus stored in a file.
 def read_tokenized_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix=''):
     corpuses = read_corpuses(*corpus_names, path=path, prefix=prefix)
     tokenize_corpuses(corpuses)
@@ -64,20 +59,11 @@ def tokenize_corpus(corpus):
         corpus[i] = corpus[i].split()
 
 
-
-
-
-# -input: corpuses is List[List[str]]
-# -output: ref_corpuses, which is List[List[List[str]]],
-# where middle list is a singleton.
-# (bc I only ever provide a single reference translation for
-# any given source sentence). 
-
-# this version of references requires same tokenization
+# load target corpuses in format required by sacreBLEU, for evaluation of predictions.
 def get_references(path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', overfit=False):
     ref_corpuses = {}
     if not overfit:
-        # only one set of references, so construct singleton list of lists of sentences
+        # only one set of references, so construct singleton list of lists of sentences.
         ref_corpuses["dev.en"] = [read_corpus("dev.en", path=path)]
         #ref_corpuses["test.en"] = [read_corpus("test.en", path=path)]
     else:

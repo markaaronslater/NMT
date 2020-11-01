@@ -1,77 +1,199 @@
 import pytest # so can use pytest.raises() method
+import torch
+
+from NMT.src.import_configs import import_configs
+from NMT.src.preprocessing.preprocess import construct_model_data, retrieve_model_data
+from NMT.src.train import train
+from NMT.src.predict import predict
+from NMT.src.preprocessing.corpus_utils import read_tokenized_corpuses
 
 
 
 
 
-# combos to test:
-# unidirectional encoder, no attention
-# bidirectional encoder, no attention
-# unidirectional encoder, attention
-# bidirectional encoder, attention
+def test_get_batches():
+    path = '/content/gdrive/My Drive/NMT/'
+    corpus_path = path + 'corpuses/toy_corpuses/'
+    config_path = path + 'configs/'
+    data_path = path + 'data/'
+    checkpoint_path = path + 'checkpoints/'
+    model_name = 'my_model' 
 
-# layer_to_layer init_scheme
-# final_to_first init_scheme
+    hyperparams = import_configs(config_path=config_path)
+    hyperparams["vocab_type"] = "word"
+    hyperparams["trim_type"] = "top_k"
+    hyperparams["src_k"] = 10
+    hyperparams["trg_k"] = 10
+    hyperparams["train_bsz"] = 2
+    hyperparams["dev_bsz"] = 2
+    hyperparams["decode_slack"] = 30
+    hyperparams["early_stopping"] = False
 
-# dot_product_attn
-# scaled_dot_product_attn
-# -> ensure produces exact expected result with allclose()
+    vocabs, corpuses, ref_corpuses = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+                        corpus_path=corpus_path, data_path=data_path, model_name=model_name, overfit=True
+                        )
 
-# apply attention_layer that projects attentional representations back to original hidden_size before projecting to vocab size
-# directly project attentional representations to vocab size
+    model_data = retrieve_model_data(data_path=data_path, model_name=model_name)
+    train_batches = model_data["train_batches"]
+    dev_batches = model_data["dev_batches"]
+    test_batches = model_data["test_batches"]
+    idx_to_trg_word = model_data["idx_to_trg_word"]
+    ref_corpuses = model_data["ref_corpuses"]
+    hyperparams = model_data["hyperparams"]
+    device = hyperparams["device"]
 
-# tie-weights = true
-# tie-weights = false
+    #print(f'src vocab:{vocabs["src_word_to_idx"]}')
+    #print(f'trg vocab:{vocabs["trg_word_to_idx"]}')
+    src_word_to_idx = vocabs["src_word_to_idx"]
+    trg_word_to_idx = vocabs["trg_word_to_idx"]
 
-# word vocab thresholded
-# word vocab top_k
-# subword vocab independent
-# subword vocab joint
-# subword vocab pos-tag-concatenated
+    train_encoder_inputs_in1 = [['das', 'ist', 'wahr', '.'], ['mache', 'ich', 'Ja', '<pad>']]
+    train_encoder_inputs_in1 = [[src_word_to_idx[word] for word in sent] for sent in train_encoder_inputs_in1]
+    train_encoder_inputs_in2 = [['heute', 'Abend', '!', '!', '!']]
+    train_encoder_inputs_in2 = [[src_word_to_idx[word] for word in sent] for sent in train_encoder_inputs_in2]
 
-# beam search
-# greedy search
+    train_decoder_inputs_in1 = [['<sos>', 'do', 'I', '?', 'yes'], ['<sos>', 'it', "'s", 'true', '<pad>']]
+    train_decoder_inputs_in1 = [[trg_word_to_idx[word] for word in sent] for sent in train_decoder_inputs_in1]
+    train_decoder_inputs_in2 = [['<sos>', 'tonight']]
+    train_decoder_inputs_in2 = [[trg_word_to_idx[word] for word in sent] for sent in train_decoder_inputs_in2]
 
-# early stopping
-# storing and loading
+    train_decoder_targets1 = ['do', 'it', 'I', "'s", '?', 'true', 'yes', '<eos>', '<eos>']
+    train_decoder_targets1 = [trg_word_to_idx[word] for word in train_decoder_targets1]
+    train_decoder_targets2 = ['tonight', '<eos>']
+    train_decoder_targets2 = [trg_word_to_idx[word] for word in train_decoder_targets2]
 
-# ensure works on both gpu and cpu
-
-# neural network correctness tests:
-# unregularized model of sufficient capacity can overfit first 10 sentences
-# of training set.
-# 1-achieve ~zero loss on first 10 sentences of training set
-# -use sum instead of mean loss, so can more easily observe loss converging to zero.
-# -if using word-level vocab, ensure there are no <unk> tokens (can use thres=1),
-# otherwise bleu score will not reach 1.
-# -make sure dropout is turned off?
-# -remember to set decode slack very high
-# -probably should turn off early stopping, and test that separately...
-# -ensure model is of sufficient capacity
-
-trainBatches = getBatches(trainingPairs[:10], 10, device)
-devBatches = getDevBatches(corpuses["train.de"][:10], 10, device)
-
-# 2-perfectly predict the first 10 training sentences (BLEU == 1)
-def my_abs(x):
-    if x < 0:
-        return -1 * x
-    else:
-        return x
-
-# neural network sanity checks
-# 1-outputted tensors are of correct shapes
+    dev_encoder_inputs_in1 = [['heute', 'Abend', '!', '!', '!'], ['das', 'ist', 'wahr', '.', '<pad>']]
+    dev_encoder_inputs_in1 = [[src_word_to_idx[word] for word in sent] for sent in dev_encoder_inputs_in1]
+    dev_encoder_inputs_in2 = [['mache', 'ich', 'Ja']]
+    dev_encoder_inputs_in2 = [[src_word_to_idx[word] for word in sent] for sent in dev_encoder_inputs_in2]
 
 
-# 2-initial loss (when initialize params with small, near-zero values) is approximately log C, where C is the vocabulary size
+    ### train_batches:
+    # train batch 1
+    encoder_inputs, decoder_inputs, decoder_targets = train_batches[0]
+    assert encoder_inputs['in'].tolist() == train_encoder_inputs_in1
+    assert torch.all(torch.eq(encoder_inputs['sorted_lengths'], torch.tensor([4, 3], device=device)))
+    assert torch.all(torch.eq(encoder_inputs['idxs_in_sorted'], torch.tensor([1, 0], device=device)))
 
-# 3-increasing L2-regularization strength increases the loss
-def test_my_abs():
-    assert my_abs(2) == 2
-    assert my_abs(-2) == 2
+    assert decoder_inputs['in'].tolist() == train_decoder_inputs_in1
+    assert torch.all(torch.eq(decoder_inputs['lengths'], torch.tensor([5, 4], device=device)))
+    assert torch.all(torch.eq(decoder_inputs['mask'], torch.tensor([[[False, False, False,  True]], [[False, False, False, False]]], device=device)))
 
-    with pytest.raises(TypeError):
-       my_abs("hello")
+    assert decoder_targets.tolist() == train_decoder_targets1
 
-def test_always_fails():
-    assert True == False
+
+    # train batch 2
+    encoder_inputs, decoder_inputs, decoder_targets = train_batches[1]
+    assert encoder_inputs['in'].tolist() == train_encoder_inputs_in2
+    assert torch.all(torch.eq(encoder_inputs['sorted_lengths'], torch.tensor([5], device=device)))
+    assert torch.all(torch.eq(encoder_inputs['idxs_in_sorted'], torch.tensor([0], device=device)))
+
+    assert decoder_inputs['in'].tolist() == train_decoder_inputs_in2
+    assert torch.all(torch.eq(decoder_inputs['lengths'], torch.tensor([2], device=device)))
+    assert torch.all(torch.eq(decoder_inputs['mask'], torch.tensor([[[False, False, False, False, False]]], device=device)))
+
+    assert decoder_targets.tolist() == train_decoder_targets2
+
+
+    ### dev_batches:
+    # dev batch 1
+    encoder_inputs, decoder_inputs, corpus_indices = dev_batches[0]
+    assert encoder_inputs['in'].tolist() == dev_encoder_inputs_in1
+    assert torch.all(torch.eq(encoder_inputs['sorted_lengths'], torch.tensor([5, 4], device=device)))
+    assert torch.all(torch.eq(encoder_inputs['idxs_in_sorted'], torch.tensor([0, 1], device=device)))
+
+    assert torch.all(torch.eq(decoder_inputs['mask'], torch.tensor([[[False, False, False, False, False]], [[False, False, False, False,  True]]], device='cuda:0')))
+    assert decoder_inputs['max_src_len'] == 5
+
+    assert torch.all(torch.eq(corpus_indices, torch.tensor([2, 0], device=device)))
+
+
+    # dev batch 2
+    encoder_inputs, decoder_inputs, corpus_indices = dev_batches[1]
+    assert encoder_inputs['in'].tolist() == dev_encoder_inputs_in2
+    assert torch.all(torch.eq(encoder_inputs['sorted_lengths'], torch.tensor([3], device=device)))
+    assert torch.all(torch.eq(encoder_inputs['idxs_in_sorted'], torch.tensor([0], device=device)))
+
+    assert torch.all(torch.eq(decoder_inputs['mask'], torch.tensor([[[False, False, False]]], device=device)))
+    assert decoder_inputs['max_src_len'] == 3
+
+    assert torch.all(torch.eq(corpus_indices, torch.tensor([1], device=device)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# overfit to first 10 sentences of training set
+def test_word_model():
+    # recommended: place cloned NMT folder in Google drive folder 'My Drive':
+    path = '/content/gdrive/My Drive/NMT/'
+    corpus_path = path + 'corpuses/iwslt16_en_de/'
+    config_path = path + 'configs/'
+    data_path = path + 'data/'
+    checkpoint_path = path + 'checkpoints/'
+    model_name = 'my_model' # name of model tensor batches, hyperparameters, etc., saved as pickle file inside data_path
+
+    hyperparams = import_configs(config_path=config_path)
+    # overwrite hyperparams to conform to test conditions
+    hyperparams["vocab_type"] = "word"
+    hyperparams["trim_type"] = "top_k"
+    hyperparams["src_k"] = 200 # set large enough such that no <unk> tokens (or else will not achieve BLEU of 100)
+    hyperparams["trg_k"] = 200
+    hyperparams["train_bsz"] = 3
+    hyperparams["dev_bsz"] = 3
+    hyperparams["decode_slack"] = 30 # set large enough such that can finish predicting each of the 10 target sentences (or else will not achieve BLEU of 100)
+    hyperparams["early_stopping"] = False # let the loss go down to zero.
+    hyperparams["total_epochs"] = 50
+    hyperparams["enc_hidden_size"] = 1000 # ensure model is of sufficient capacity
+    hyperparams["dec_hidden_size"] = 1000
+    hyperparams["enc_dropout"] = 0 # ensure regularization turned off
+    hyperparams["dec_dropout"] = 0
+    hyperparams["L2_reg"] = 0
+
+    vocabs, corpuses, ref_corpuses = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+                        corpus_path=corpus_path, data_path=data_path, model_name=model_name, overfit=True
+                        )
+    model_data = retrieve_model_data(data_path=data_path, model_name=model_name)
+    train_batches = model_data["train_batches"]
+    dev_batches = model_data["dev_batches"]
+    idx_to_trg_word = model_data["idx_to_trg_word"]
+    ref_corpuses = model_data["ref_corpuses"]
+    hyperparams = model_data["hyperparams"]
+
+    #print(f'src vocab:{vocabs["src_word_to_idx"]}')
+    #print(f'trg vocab:{vocabs["trg_word_to_idx"]}')
+    dev_references = ref_corpuses["train.en"] # predict the training data
+
+    # should achieve ~zero loss:
+    model, loss = train(hyperparams, train_batches, dev_batches, dev_references, idx_to_trg_word, checkpoint_path, save=False)
+    assert loss < .01
+
+    # greedy search should be able to perfectly predict the training data:
+    bleu, preds_time, post_time = predict(model, dev_batches, dev_references, idx_to_trg_word, checkpoint_path)
+    assert bleu == 100
+
+    # beam search should be able to perfectly predict the training data:
+    model.decoder.set_inference_alg("beam_search")
+    bleu, preds_time, post_time = predict(model, dev_batches, dev_references, idx_to_trg_word, checkpoint_path)
+    assert bleu == 100
+
+
+def test_subword_model():
+
+
+
+
+
+def test_early_stopping():
+    # set seed so know when done.
+    pass

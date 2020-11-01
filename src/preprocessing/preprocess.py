@@ -1,33 +1,16 @@
 import torch
 from pickle import load, dump
 
-from NMT.src.import_configs import import_configs
 from NMT.src.preprocessing.corpus_utils import get_references, read_tokenized_corpuses
 from NMT.src.preprocessing.build_word_vocabs import build_word_vocabs
 from NMT.src.preprocessing.build_subword_vocabs import build_subword_vocabs
 from NMT.src.preprocessing.apply_vocab import apply_vocab
 from NMT.src.preprocessing.build_batches import get_batches
-#from pos_concatenate import pos_concatenate_corpuses
-#from subword_segment import subword_segment_corpuses
 
-
-# now that finished most expensive preprocessing step, can perform remainder of preprocessing.
-#preprocess_phase2
-#def preprocess_phase2(path='/content/gdrive/My Drive/NMT/iwslt16_en_de/', num=None, vocab_type="subword_joint"):
-    #corpuses = retrieve_stanza_outputs() # dict of corpus names, each mapped to a stanza Document object
-    #decase_corpuses(corpuses, path) # overwrites corpuses as dict of corpus names, each mapped to List[List[str]] (list of corpus's decased sentences, each of which is a list of words)
-    #if vocab_type in ["subword_ind", "subword_joint", "subword_pos"]:
-    #    subword_segment_corpuses(corpuses, path)
-    #if vocab_type in ["word_pos", "subword_pos"]:
-    #    pos_concatenate_corpuses(corpuses, path)
-
-
-# converts all preprocessed corpuses into tensors that can be directly
+# -converts all preprocessed corpuses into tensors that can be directly
 # passed to a model, and saves them to pickle files.
-# returns corresponding hyperparameters that can be used to instantiate
+# -returns corresponding hyperparameters that can be used to instantiate
 # a compatible model.
-# preprocess_phase3
-# !!!incorporate vocab_threshold in hyperparams file instead.
 def construct_model_data(*corpus_names,
         hyperparams={},
         corpus_path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/',
@@ -38,9 +21,8 @@ def construct_model_data(*corpus_names,
         overfit=False):
     
     vocab_type = hyperparams["vocab_type"]
-    prefix = vocab_type + "_"
-    # which variants of preprocessed corpuses to load depends on vocab type
-    corpuses = read_tokenized_corpuses(*corpus_names, path=corpus_path, prefix=prefix)
+    # which variants of preprocessed corpuses to load depends on vocab type.
+    corpuses = read_tokenized_corpuses(*corpus_names, path=corpus_path, prefix=vocab_type+"_")
         
     # build vocabs
     if vocab_type in ["word"]:
@@ -57,9 +39,8 @@ def construct_model_data(*corpus_names,
     hyperparams["sos_idx"] = sos_idx
     hyperparams["eos_idx"] = eos_idx
 
-    # convert each corpus of words to corpus of indices,
-    # and replace out-of-vocabulary words with unknown token
-    # (if using word-level vocabs).
+    # convert each corpus of words to corpus of indices, and replace
+    # out-of-vocabulary words with unknown token (if using word-level vocabs).
     apply_vocab(corpuses, vocabs, vocab_type)
     
     # only target sentences use start and end-of-sentence tokens

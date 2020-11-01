@@ -78,8 +78,8 @@ def train(hyperparams, train_batches, dev_batches, dev_references,
                 store_checkpoint(model, optimizer, epoch, epoch_loss, bleu, prev_bleu, best_bleu, bad_epochs_count, checkpoint_path, "best_model")
             if bad_epochs_count == threshold:
                 # early-stopping threshold met
-                best_model = load_checkpoint(hyperparams, checkpoint_path, "best_model")
-                return best_model
+                best_model, epoch_loss = load_checkpoint(hyperparams, checkpoint_path, "best_model")
+                return best_model, epoch_loss
 
         if save:
             # store checkpoint each epoch, e.g., so can pick up training at later time.
@@ -88,9 +88,9 @@ def train(hyperparams, train_batches, dev_batches, dev_references,
 
     if early_stopping:
         best_model = load_checkpoint(hyperparams, checkpoint_path, "best_model")
-        return best_model
+        return best_model, epoch_loss
     else:
-        return model
+        return model, epoch_loss
 
 
 
@@ -165,11 +165,11 @@ def load_checkpoint(hyperparams, checkpoint_path, name):
     # if loading most_recent_model, then resuming training,
     # so need to return all associated epoch information,
     # but if loading best_model, finished training and now want to
-    # predict test set, so just return the model.
+    # predict test set, so just return the model and its loss.
     if name == "most_recent_model":
         return model, optimizer, checkpoint['epoch'], 
         checkpoint['epoch_loss'], checkpoint['bleu'],
         checkpoint['prev_bleu'], checkpoint['best_bleu'],
         checkpoint['bad_epochs_count']
     else:
-        return model
+        return model, checkpoint['epoch_loss']
