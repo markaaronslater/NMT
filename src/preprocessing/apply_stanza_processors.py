@@ -16,12 +16,13 @@ from src.preprocessing.corpus_utils import is_src_corpus
 # (we could use a bsz of 1 to avoid that, but takes very long time).
 def apply_stanza_processors(*corpus_names,
                             path='/content/gdrive/My Drive/NMT/iwslt16_en_de/',
-                            src_lang="de", trg_lang="en", _start=1, num=None):
+                            src_lang="de", trg_lang="en", _start=1, num=None,
+                            tok_bsz=16, mwt_bsz=20, pos_bsz=2000):
     stanza.download(lang=src_lang, processors='tokenize,mwt,pos')
     stanza.download(lang=trg_lang, processors='tokenize,pos')
 
-    src_processor = stanza.Pipeline(lang=src_lang, processors='tokenize,mwt,pos', tokenize_no_ssplit=True)
-    trg_processor = stanza.Pipeline(lang=trg_lang, processors='tokenize,pos', tokenize_no_ssplit=True)
+    src_processor = stanza.Pipeline(lang=src_lang, processors='tokenize,mwt,pos', tokenize_no_ssplit=True, tokenize_batch_size=tok_bsz, mwt_batch_size=mwt_bsz, pos_batch_size=pos_bsz)
+    trg_processor = stanza.Pipeline(lang=trg_lang, processors='tokenize,pos', tokenize_no_ssplit=True, tokenize_batch_size=tok_bsz, pos_batch_size=pos_bsz)
 
     for corpus_name in corpus_names:
         with open(path + corpus_name, mode='rt', encoding='utf-8') as f:
