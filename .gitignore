@@ -1,4 +1,5 @@
 .ipynb_checkpoints/
+**/.pytest_cache/**
 **/.DS_Store
 **/__pycache__/
 *.[Jj][Pp][Ee][Gg]

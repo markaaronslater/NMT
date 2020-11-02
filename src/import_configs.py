@@ -5,10 +5,12 @@
 # bidirectional_encoder=True
 # enc_hidden_size=500
 # ...
-def import_configs(config_path='/content/gdrive/My Drive/NMT/configs/'):
+def import_configs(config_path='/content/gdrive/My Drive/NMT/configs/', unittesting=False):
     hyperparams = {}
     read_configs(hyperparams, config_path)
     process_configs(hyperparams)
+    if unittesting:
+        overwrite_configs(hyperparams)
     constrain_configs(hyperparams)
 
     return hyperparams
@@ -84,3 +86,25 @@ def constrain_configs(hyperparams):
 
     if hyperparams['tie_weights']:
         assert hyperparams['dec_input_size'] == hyperparams['dec_hidden_size']
+
+
+
+# use mostly the same default hyperparams as when actually training, but overwrite
+# such that applies to toy dataset (e.g., first 10 sentences of training sets).
+def overwrite_configs(hyperparams):
+    hyperparams["train_bsz"] = 3
+    hyperparams["dev_bsz"] = 3
+    hyperparams["decode_slack"] = 30 # set large enough such that can finish predicting each of the 10 target sentences (or else will not achieve BLEU of 100)
+    hyperparams["early_stopping"] = False # let the loss go down to zero.
+    hyperparams["total_epochs"] = 100
+    hyperparams["enc_hidden_size"] = 1500 # ensure model is of sufficient capacity
+    hyperparams["dec_hidden_size"] = 1500
+    hyperparams["enc_dropout"] = 0 # ensure regularization turned off
+    hyperparams["dec_dropout"] = 0
+    hyperparams["L2_reg"] = 0
+    hyperparams["src_k"] = 200 # set large enough such that every word included in vocab (or else will not achieve BLEU of 100)
+    hyperparams["trg_k"] = 200
+    hyperparams["src_thres"] = 1 # every word included in vocab
+    hyperparams["trg_thres"] = 1
+    hyperparams["num_merge_ops"] = 300    
+    hyperparams["vocab_threshold"] = 0 # every word included in vocab

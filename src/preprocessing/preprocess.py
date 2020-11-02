@@ -1,11 +1,11 @@
 import torch
 from pickle import load, dump
 
-from NMT.src.preprocessing.corpus_utils import get_references, read_tokenized_corpuses
-from NMT.src.preprocessing.build_word_vocabs import build_word_vocabs
-from NMT.src.preprocessing.build_subword_vocabs import build_subword_vocabs
-from NMT.src.preprocessing.apply_vocab import apply_vocab
-from NMT.src.preprocessing.build_batches import get_batches
+from src.preprocessing.corpus_utils import get_references, read_tokenized_corpuses
+from src.preprocessing.build_word_vocabs import build_word_vocabs
+from src.preprocessing.build_subword_vocabs import build_subword_vocabs
+from src.preprocessing.apply_vocab import apply_vocab
+from src.preprocessing.build_batches import get_batches
 
 # -converts all preprocessed corpuses into tensors that can be directly
 # passed to a model, and saves them to pickle files.
@@ -18,7 +18,8 @@ def construct_model_data(*corpus_names,
         model_name='my_model',
         src_vocab_file='vocab.de',
         trg_vocab_file='vocab.en',
-        overfit=False):
+        overfit=False,
+        write=True):
     
     vocab_type = hyperparams["vocab_type"]
     # which variants of preprocessed corpuses to load depends on vocab type.
@@ -63,10 +64,12 @@ def construct_model_data(*corpus_names,
         "ref_corpuses":ref_corpuses,
         "hyperparams":hyperparams
     }
-    
-    dump(model_data, open(f"{data_path}{model_name}.pkl", 'wb'))
 
-    return vocabs, corpuses, ref_corpuses
+    if write:
+        dump(model_data, open(f"{data_path}{model_name}.pkl", 'wb'))
+
+    # for convenience in unit tests
+    return train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams
 
 
 def retrieve_model_data(data_path='/content/gdrive/My Drive/NMT/data/', model_name='my_model'):

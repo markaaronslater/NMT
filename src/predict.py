@@ -3,7 +3,7 @@ import torch.nn as nn
 import time
 import sacrebleu
 
-from NMT.src.postprocessing.postprocess import postprocess
+from src.postprocessing.postprocess import postprocess
 
 
 def predict(model, test_batches, references, idx_to_trg_word, folder, ep='', write=True):

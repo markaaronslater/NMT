@@ -1,7 +1,7 @@
 from pickle import load, dump
 import stanza
 
-from NMT.src.preprocessing.corpus_utils import is_src_corpus
+from src.preprocessing.corpus_utils import is_src_corpus
 
 # use stanfordnlp processor to perform
 # -tokenization,

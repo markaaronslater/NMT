@@ -1,1 +1,0 @@
-# verify get_batch produces expected tensors

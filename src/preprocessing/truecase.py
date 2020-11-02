@@ -1,5 +1,5 @@
-from NMT.src.preprocessing.corpus_utils import write_corpuses, is_src_corpus
-from NMT.src.preprocessing.apply_stanza_processors import retrieve_stanza_outputs
+from src.preprocessing.corpus_utils import write_corpuses, is_src_corpus
+from src.preprocessing.apply_stanza_processors import retrieve_stanza_outputs
 
 def truecase_corpuses(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_de/'):
     corpuses = retrieve_stanza_outputs(*corpus_names, path=path)

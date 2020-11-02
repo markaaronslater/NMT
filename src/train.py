@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import time, random
 
-from NMT.src.predict import predict
-from NMT.src.model.lstm.model import EncoderDecoder
+from src.predict import predict
+from src.model.lstm.model import EncoderDecoder
 
 # -train_batches holds training data as tensors.
 # -dev_batches holds dev data as tensors, for estimating model quality
@@ -43,6 +43,8 @@ def train(hyperparams, train_batches, dev_batches, dev_references,
         model = initialize_model(hyperparams)
         optimizer = initialize_optimizer(model, hyperparams)
         start_epoch, best_bleu, prev_bleu, bad_epochs_count = 0, 0, 0, 0
+        with open(checkpoint_path + 'model_train_stats.txt', 'w') as f: # clear model_train_stats.txt
+            f.write('')
     else:
         # resume training previous model checkpoint
         model, optimizer, epoch, epoch_loss, bleu, prev_bleu, best_bleu, bad_epochs_count = load_checkpoint(hyperparams, checkpoint_path, "most_recent_model")

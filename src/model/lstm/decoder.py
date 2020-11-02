@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-from NMT.src.model.lstm.beam_search_utils import initialize_beams, expand_beams, update_beams, write_finished_translations
+from src.model.lstm.beam_search_utils import initialize_beams, expand_beams, update_beams, write_finished_translations
 
 class Decoder(nn.Module):
     def __init__(self, hyperparams, inference_alg="greedy_search"):
