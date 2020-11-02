@@ -31,13 +31,16 @@ def apply_stanza_processors(*corpus_names,
             # supply input in format required for disabling sentence segmentation.
             processor_input = '\n\n'.join(corpus[start:start+upper])
 
+            print(f"processing {corpus_name}...")
             if is_src_corpus(corpus_name):
                 # pass entire corpus. stanza will process it in batches.
                 doc = src_processor(processor_input) # returns Document object
                 dump(doc, open(f"{path}stanza_{corpus_name}.pkl", 'wb'))
+                print(f"done. saved to {path}stanza_{corpus_name}.pkl\n")
             else:
                 doc = trg_processor(processor_input)
                 dump(doc, open(f"{path}stanza_{corpus_name}.pkl", 'wb'))
+                print(f"done. saved to {path}stanza_{corpus_name}.pkl\n")
 
 
 # returns a dict of corpus_names mapped to stanza Document objects
