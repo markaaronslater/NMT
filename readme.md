@@ -20,8 +20,9 @@ model features:
         (default settings shown after '=', and all possible options in [...] inside comments. if omitted, then if default is an int or boolean, must set as an int or boolean, respectively, and if default is a float, can set as int or float).
 
         
+
 Encoder Options | Default Setting | Possible Settings | Comments
---------| --------------- | ----------------- | --------
+------| --------- | --------- | --------------------------------------
 bidirectional | True | boolean | if true, use bidirectional instead of unidirectional encoder
 project | True | boolean | whether to project the concatenated forward and backward encoder states back to original dimensionality (so that same size as decoder hidden states when computing attention) (only used if bidirectional == True)
 reverse_src | False | boolean |  whether to pass src sentence to encoder in reverse order (only used if bidirectional == False)
@@ -30,6 +31,7 @@ enc_input_size | 300 | int | embedding size
 enc_hidden_size | 600 | int |
 enc_num_layers | 1 | int | 
 enc_dropout | 0.0 | float | 
+
 
 
 Decoder Options | Default Setting | Possible Settings | Comments
@@ -43,6 +45,7 @@ dec_input_size | 300 | int | embedding size
 dec_hidden_size | 600 | int | 
 dec_num_layers | 1 | int |  
 dec_dropout | 0.0 | float | 
+
 
 
 Training Options | Default Setting | Possible Settings | Comments
