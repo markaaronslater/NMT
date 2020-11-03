@@ -47,6 +47,19 @@ def test_scaled_attn():
     predict_train_data(hyperparams, train_batches, dev_batches, ref_corpuses["train.en"], vocabs["idx_to_trg_word"], checkpoint_path)
     
 
+# default model, except dropout after lstm is turned on.
+def test_dropout():
+    hyperparams = import_configs(config_path=config_path, unittesting=True)
+    hyperparams["enc_dropout"] = 0.2
+    hyperparams["dec_dropout"] = 0.2
+
+    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+                        corpus_path=corpus_path, overfit=True, write=False
+                        )
+
+    predict_train_data(hyperparams, train_batches, dev_batches, ref_corpuses["train.en"], vocabs["idx_to_trg_word"], checkpoint_path)
+    
+
 # ensure still works on cpu.
 # must change runtime type to cpu before performing this test
 # def test_default_word_model_cpu():

@@ -52,7 +52,7 @@ class Decoder(nn.Module):
         else:
             self.out = nn.Linear(2*self.hidden_size, self.vocab_size)
         
-        self.dropout_layer = nn.Dropout(p=hyperparams["dec_dropout"], inplace=True)
+        self.dropout_layer = nn.Dropout(p=hyperparams["dec_dropout"])
         # use same matrix for embedding target words as for
         # predicting probability distributions over those words.
         if hyperparams["tie_weights"]:
@@ -75,14 +75,16 @@ class Decoder(nn.Module):
             packed_output, _ = self.lstm(packed_input, initial_state) # (total_len x hidden_size)
             # (where total_len is the total number of non-pad tokens in the batch).
             
-            # dropout applied prior to computing attention.
-            self.dropout_layer(packed_output.data)
+            
             if self.attention:
                 decoder_states, _ = pad_packed_sequence(packed_output, batch_first=True) # (bsz x max_trg_len x hidden_size)
+                # dropout applied prior to computing attention.
+                decoder_states = self.dropout_layer(decoder_states)
                 attentional_states = self.attend(decoder_states, encoder_states, decoder_inputs["mask"]) # (bsz x max_trg_len x 2*hidden_size)
                 attentional_states = pack_padded_sequence(attentional_states, decoder_inputs["lengths"], batch_first=True).data # (total_len x 2*hidden_size)
             else:
                 attentional_states = packed_output.data
+                attentional_states = self.dropout_layer(attentional_states)
 
             del packed_input, packed_output
             if self.project_att_states:

@@ -63,7 +63,8 @@ def process_configs(hyperparams):
         else:
             raise ValueError(f"error: provided a non-boolean value for {hp}: {hyperparams[hp]}. see readme for proper input formats.")
 
-    float_hyperparams = ["learning_rate", "L2_reg", "enc_dropout", "dec_dropout"]
+    float_hyperparams = [   "learning_rate", "L2_reg", "enc_dropout", "enc_lstm_dropout", 
+                            "dec_dropout", "dec_lstm_dropout"]
     for hp in float_hyperparams:
         # will raise ValueError on its own if passed non-numeric value.
         hyperparams[hp] = float(hyperparams[hp])

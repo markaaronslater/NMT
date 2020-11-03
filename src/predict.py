@@ -1,12 +1,11 @@
 import torch
 import torch.nn as nn
 import time
-import sacrebleu
 
 from src.postprocessing.postprocess import postprocess
 
 
-def predict(model, test_batches, references, idx_to_trg_word, folder, ep='', write=True):
+def predict(model, test_batches, idx_to_trg_word, folder='', ep='', write=True):
     with torch.no_grad():
         model.eval()
         model.encoder.eval()
@@ -22,10 +21,7 @@ def predict(model, test_batches, references, idx_to_trg_word, folder, ep='', wri
         if write:
             write_translations(post_processed_translations, model.decoder.inference_alg, folder, ep)
 
-        # estimate performance on dev set, or determine performance on test set
-        bleu = sacrebleu.corpus_bleu(post_processed_translations, references)
-    
-    return bleu.score, preds_time, post_time
+    return post_processed_translations, preds_time, post_time
 
 
 def write_translations(translations, inference_alg, folder, ep):

@@ -17,7 +17,7 @@ def truecase_corpuses(*corpus_names, corpus_path='/content/gdrive/My Drive/NMT/c
         for piece_number in range(1, num_pieces+1):
             corpus_piece = load(open(f"{stanza_path}stanza_{corpus_name}_{piece_number}.pkl", 'rb'))
             print(f"truecasing piece {piece_number} of {corpus_name}...")
-            truecase(corpus_name, truecased_path, corpus_piece, should_lower)  
+            truecase_corpus(corpus_name, truecased_path, corpus_piece, should_lower)  
     
     print("done.")
     
@@ -29,16 +29,20 @@ def truecase_corpuses(*corpus_names, corpus_path='/content/gdrive/My Drive/NMT/c
 # where each sentence has been decased using linguistic heuristics that
 # leverage morphological data supplied by pos-tagger.
 # (this is more accurate than, e.g., the Moses truecaser).
-def truecase(corpus_name, truecased_path, sentences, should_lower):
+def truecase_corpus(corpus_name, truecased_path, sentences, should_lower):
     # append all corpus pieces into single truecased corpus text file.
     with open(f"{truecased_path}word_{corpus_name}", mode='a', encoding='utf-8') as f:
         for i, sent in enumerate(sentences):
-            for j, word in enumerate(sent.words):
-                if j == 0 and should_lower(word) or should_lower(word, sent.words[j-1]):
-                    sent.words[j].text = word.text.lower()
-
+            truecase_sentence(sent, should_lower)
             f.write(' '.join([word.text for word in sent.words]))
             f.write('\n')
+
+
+def truecase_sentence(sent, should_lower):
+    for j, word in enumerate(sent.words):
+        if j == 0 and should_lower(word) or should_lower(word, sent.words[j-1]):
+            sent.words[j].text = word.text.lower()
+
 
 
 ### the following should_be_lower() functions exploit domain knowledge about

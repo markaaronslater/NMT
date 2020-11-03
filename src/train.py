@@ -3,6 +3,7 @@ import torch.nn as nn
 import time, random
 
 from src.predict import predict
+from src.evaluate import evaluate
 from src.model.lstm.model import EncoderDecoder
 
 # -train_batches holds training data as tensors.
@@ -62,7 +63,9 @@ def train(hyperparams, train_batches, dev_batches, dev_references,
             epoch_loss += training_step(model, optimizer, ce_loss, batch)
             
         epoch_time = time.time() - epoch_start_time
-        bleu, preds_time, post_time = predict(model, dev_batches, dev_references, idx_to_trg_word, checkpoint_path, epoch, write=True)
+        dev_translations, preds_time, post_time = predict(model, dev_batches, idx_to_trg_word, checkpoint_path, epoch, write=True)
+        bleu = evaluate(dev_translations, dev_references)
+        
         model.train()
         model.encoder.train()
         model.decoder.train()

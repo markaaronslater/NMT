@@ -28,7 +28,7 @@ class Encoder(nn.Module):
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)
         self.lstm = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, bidirectional=self.bidirectional, dropout=self.lstm_dropout, batch_first=True)
-        self.dropout_layer = nn.Dropout(p=hyperparams["enc_dropout"], inplace=True)
+        self.dropout_layer = nn.Dropout(p=hyperparams["enc_dropout"])
         if self.bidirectional:
             # uses separate sets of parameters to construct the states to compute attention with,
             # and the state for initializing the decoder hidden state.
@@ -42,7 +42,7 @@ class Encoder(nn.Module):
         encoder_states, _ = pad_packed_sequence(packed_output, batch_first=True)
         # -> encoder_states is 3D tensor of size (bsz x max_src_len x num_directions*encoder_hidden_size)
         # dropout applied prior to projecting back to decoder hidden size.
-        self.dropout_layer(encoder_states)
+        encoder_states = self.dropout_layer(encoder_states)
 
         del packed_input, packed_output
         initial_h, initial_c = self.initialize_decoder_state(hn, cn)
