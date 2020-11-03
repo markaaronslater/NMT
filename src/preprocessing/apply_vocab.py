@@ -26,12 +26,12 @@ def removeOOV(sentences, vocab):
 
 
 def replace_with_indices(corpuses, vocabs):
-    to_indices(corpuses["train.de"], vocabs["src_word_to_idx"])
-    to_indices(corpuses["train.en"], vocabs["trg_word_to_idx"])
+    to_indices("train.de", corpuses["train.de"], vocabs["src_word_to_idx"])
+    to_indices("train.en", corpuses["train.en"], vocabs["trg_word_to_idx"])
     if "dev.de" in corpuses:
-        to_indices(corpuses["dev.de"], vocabs["src_word_to_idx"])   
+        to_indices("dev.de", corpuses["dev.de"], vocabs["src_word_to_idx"])   
     if "test.de" in corpuses:
-        to_indices(corpuses["test.de"], vocabs["src_word_to_idx"])
+        to_indices("test.de", corpuses["test.de"], vocabs["src_word_to_idx"])
 
 
 # except clause catches OOV symbols in src dev/test sets when using subword vocabs.
@@ -40,11 +40,11 @@ def replace_with_indices(corpuses, vocabs):
 #     word) in src training set.
 # 2 - a symbol that never occurred in isolation in the src training set after
 #     segment it based on learned bpe codes (always occurred inside larger
-#     symbol) (never happened for me).
+#     symbol) (this includes the case of single characters).
 #       -> it could have occurred in original train set, but not the threshold
 #          number of times, as specified by <vocab_threshold>, so never occurred
 #          in segmented train set.
-def to_indices(sentences, vocab):
+def to_indices(corpus_name, sentences, vocab):
     for i, sent in enumerate(sentences):
         new_sent = [] # contains corresponding indices of sent
         for symbol in sent:
@@ -52,6 +52,6 @@ def to_indices(sentences, vocab):
             try:
                 new_sent.append(vocab[symbol])
             except KeyError:
-                print(f"warning: found and removed unknown symbol: {symbol} in sent: {sent}")
-                print()
+                #continue
+                print(f"warning: found and removed unknown symbol {symbol} in following sentence of {corpus_name}: {sent}")
         sentences[i] = new_sent

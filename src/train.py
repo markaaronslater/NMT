@@ -43,8 +43,7 @@ def train(hyperparams, train_batches, dev_batches, dev_references,
         model = initialize_model(hyperparams)
         optimizer = initialize_optimizer(model, hyperparams)
         start_epoch, best_bleu, prev_bleu, bad_epochs_count = 0, 0, 0, 0
-        with open(checkpoint_path + 'model_train_stats.txt', 'w') as f: # clear model_train_stats.txt
-            f.write('')
+        open(f"{checkpoint_path}model_train_stats.txt", 'w').close() # clear model_train_stats.txt
     else:
         # resume training previous model checkpoint
         model, optimizer, epoch, epoch_loss, bleu, prev_bleu, best_bleu, bad_epochs_count = load_checkpoint(hyperparams, checkpoint_path, "most_recent_model")

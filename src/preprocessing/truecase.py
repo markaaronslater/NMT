@@ -1,18 +1,26 @@
-from src.preprocessing.corpus_utils import write_corpuses, is_src_corpus
-from src.preprocessing.apply_stanza_processors import retrieve_stanza_outputs
+from pickle import load
 
-def truecase_corpuses(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_de/'):
-    corpuses = retrieve_stanza_outputs(*corpus_names, path=path)
-    for corpus_name in corpuses:
-        if is_src_corpus(corpus_name):
-            truecase(corpus_name, corpuses, should_lower_de, path)  
-        else:
-            truecase(corpus_name, corpuses, should_lower_en, path)
 
-    # decased corpuses directly used by model employing vanilla word-level vocab.
-    # (other vocab-types process the corpuses even further).
-    write_corpuses(corpuses, path, 'word_') 
+from src.preprocessing.corpus_utils import is_src_corpus
 
+def truecase_corpuses(*corpus_names, corpus_path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/'):
+    stanza_path = corpus_path + 'stanza_outputs/'
+    truecased_path = corpus_path + 'truecased/'
+    num_corpus_pieces = load(open(f"{stanza_path}num_corpus_pieces.pkl", 'rb'))
+    for corpus_name in corpus_names:
+        should_lower = should_lower_de if is_src_corpus(corpus_name) else should_lower_en
+
+        # each processed corpus is a list of Stanza Sentence objects.
+        open(f"{truecased_path}word_{corpus_name}", 'w').close() # clear existing file (appended to inside truecase)
+        num_pieces = num_corpus_pieces[corpus_name]
+        # entire processed corpus does not fit in memory. apply truecasing in pieces.
+        for piece_number in range(1, num_pieces+1):
+            corpus_piece = load(open(f"{stanza_path}stanza_{corpus_name}_{piece_number}.pkl", 'rb'))
+            print(f"truecasing piece {piece_number} of {corpus_name}...")
+            truecase(corpus_name, truecased_path, corpus_piece, should_lower)  
+    
+    print("done.")
+    
 
 # -before calling, corpuses is dict that maps each corpus name to a
 # stanza Document object corresponding to its entire stanza-processed corpus.
@@ -21,17 +29,16 @@ def truecase_corpuses(*corpus_names, path='/content/gdrive/My Drive/iwslt16_en_d
 # where each sentence has been decased using linguistic heuristics that
 # leverage morphological data supplied by pos-tagger.
 # (this is more accurate than, e.g., the Moses truecaser).
-def truecase(corpus_name, corpuses, should_lower, path='/content/gdrive/My Drive/iwslt16_en_de/', _start=1, num=None):
-    doc = corpuses[corpus_name]
-    decased_corpus = []
-    for i, sent in enumerate(doc.sentences):
-        for j, word in enumerate(sent.words):
-            if j == 0 and should_lower(word) or should_lower(word, sent.words[j-1]):
-                sent.words[j].text = word.text.lower()
+def truecase(corpus_name, truecased_path, sentences, should_lower):
+    # append all corpus pieces into single truecased corpus text file.
+    with open(f"{truecased_path}word_{corpus_name}", mode='a', encoding='utf-8') as f:
+        for i, sent in enumerate(sentences):
+            for j, word in enumerate(sent.words):
+                if j == 0 and should_lower(word) or should_lower(word, sent.words[j-1]):
+                    sent.words[j].text = word.text.lower()
 
-        decased_corpus.append([word.text for word in sent.words])
-
-    corpuses[corpus_name] = decased_corpus
+            f.write(' '.join([word.text for word in sent.words]))
+            f.write('\n')
 
 
 ### the following should_be_lower() functions exploit domain knowledge about

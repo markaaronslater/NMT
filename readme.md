@@ -5,19 +5,36 @@ coming soon:
 -support for more language pairs and translation directions
 
 
-model features:
--fully-parallelized (optimally efficient, i.e., no unnecessary loops in training and inference code).
+**model features**:
+
 -attention mechanism.
+
 -both beam search and greedy search inference algorithms.
+
 -extraction and application of either word-level or subword-level model vocabularies.
+
+-**efficiency**:
+
+-optimally efficient, i.e., no unnecessary loops in training and inference code.
+
+-intelligent batching is performed so that the number of pad tokens (in batches of variable-length sequences) is minimized during both training (where batches are converted to PackedSequence objects) and inference.
+
+-**flexibility**:
+
+-can easily specify hyperparameter settings and architectural variations through set of configuration files (see options below).
+
+
+-robust:
+
+
 -high degree of model flexibility controlled with set of configuration files that set hyperparameters, architectural variations, etc.
--training algorithm performs early-stopping and, when run in Google Colab notebook, saves both most-recent (so can resume training at later date) and best-so-far (so can extract for later predicting test set, etc.) model checkpoints in Google Drive.
+-training algorithm performs early-stopping and, when run in Google Colab notebook, saves both most-recent (so can resume training at later date, gracefully recover from Colab runtime disconnections, etc.) and best-so-far (so can extract for later predicting test set, etc.) model checkpoints in Google Drive.
 -all preprocessing performed starting from parallel set of train files, train.de and train.en, where line i of train.en is the ground-truth English translation of line i of train.de. Calls a series of pre-trained Stanford CoreNLP (Stanza) processors that perform tokenization, multi-word token expansion, and part-of-speech tagging on each corpus. This part-of-speech information is then leveraged by truecasing algorithm that employs linguistic heuristics to decide whether or not to convert a word to lowercase (so that a word's meaning is not distributed across capitalized and lower-case embeddings, size of vocabulary is reduced, etc.). These truecased corpuses of words are then optionally segmented into corpuses of subwords (employing byte-pair-encodings of https://github.com/rsennrich/subword-nmt-nmt). Lastly, intelligent batching is performed so that the number of pad tokens (in batches of variable-length sequences) is minimized during both training and inference, and so that PackedSequence objects can be used. coming soon: additional preprocessing steps, such as compound-splitting and punctuation-collapsing.
 
 
-        possible configuration settings:
-        (do not worry about passing an invalid combination of settings, bc constrain_configs() will raise an assertion error for you).
-        (default settings shown after '=', and all possible options in [...] inside comments. if omitted, then if default is an int or boolean, must set as an int or boolean, respectively, and if default is a float, can set as int or float).
+possible configuration settings:
+(do not worry about passing an invalid combination of settings, bc constrain_configs() will raise an assertion error for you).
+(default settings shown after '=', and all possible options in [...] inside comments. if omitted, then if default is an int or boolean, must set as an int or boolean, respectively, and if default is a float, can set as int or float).
 
         
 

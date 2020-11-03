@@ -98,6 +98,8 @@ def test_final_to_first_uni_no_attn():
     
 
 
+
+# associate some epoch number with saved model, so can verify stored correct model.
 def test_early_stopping():
     # set random seed
     pass

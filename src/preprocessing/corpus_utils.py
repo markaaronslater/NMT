@@ -99,10 +99,10 @@ def print_processed_corpuses(corpuses, num=None):
         print_processed_corpus(corpuses[corpus_name], num)
 
 
-# each corpus is a stanza Document object.
-def print_processed_corpus(doc, num=None):
-    upper = num if num is not None else len(doc.sentences)
-    for i, sent in enumerate(doc.sentences[:upper]):
+# each corpus is a list of Stanza Sentence objects.
+def print_processed_corpus(sentences, num=None):
+    upper = num if num is not None else len(sentences)
+    for i, sent in enumerate(sentences[:upper]):
         print(f"####### sentence {i+1}: #######")
         for word in sent.words: 
             print(f'word: {word.text}\t\tupos: {word.upos}\txpos: {word.xpos}')

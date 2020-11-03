@@ -53,7 +53,7 @@ def construct_model_data(*corpus_names,
     train_batches, dev_batches, test_batches = get_batches(corpuses, train_bsz=hyperparams["train_bsz"], dev_bsz=hyperparams["dev_bsz"], test_bsz=hyperparams["test_bsz"], device=hyperparams["device"], overfit=overfit)
     
     # lastly, even though independent of model, include the references for convenience.
-    ref_corpuses = get_references(path=corpus_path, overfit=overfit)
+    ref_corpuses = get_references(overfit=overfit)
 
     # can directly be loaded to instantiate and then train a model.
     model_data = {

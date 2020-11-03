@@ -42,5 +42,8 @@ def get_vocab_mapping(vocab, vocab_file, vocab_threshold):
     with open(vocab_file, "r") as f:
         for subword_count in f:
             subword, count = subword_count.split()[0], int(subword_count.split()[1])
-            if subword not in vocab and count >= vocab_threshold:
+            # if is a single character (either word-final or word-internal,
+            # include in vocabulary even if does not occur above threshold).
+            is_single_char = len(subword) == 1 or len(subword) == 3 and subword[-2:] == '@@'
+            if subword not in vocab and (count >= vocab_threshold or is_single_char):
                 vocab[subword] = len(vocab)

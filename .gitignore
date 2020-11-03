@@ -6,3 +6,6 @@
 *.[Jj][Pp][Gg]
 data/
 checkpoints/
+corpuses/iwslt16_en_de/stanza_outputs/
+corpuses/iwslt16_en_de/truecased/
+corpuses/iwslt16_en_de/subword_segmented/
