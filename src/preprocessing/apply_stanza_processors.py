@@ -63,25 +63,8 @@ def apply_stanza_processor(corpus_name, corpus, processor, path='/content/gdrive
         dump(doc.sentences, open(f"{path}stanza_{corpus_name}_{piece_number}.pkl", 'wb'))
 
 
-# # returns list of Stanza Sentence objects corresponding to each corpus.
-# def retrieve_stanza_outputs(*corpuses, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/stanza_outputs/'):
-#     # get the number of pieces that each corpus is distributed across
-#     num_corpus_pieces = load(open(f"{path}num_corpus_pieces.pkl", 'rb'))
-#     processed_corpuses = {}
-#     for corpus_name in corpuses:
-#         processed_corpuses[corpus_name] = merge_corpus_pieces(corpus_name, num_corpus_pieces[corpus_name], path)
-
-#     return processed_corpuses
-
-
-
-# def retrieve_stanza_output(corpus_name, num_pieces, path):
-#     print(f"{corpus_name} split across {num_pieces} pieces.\n")
-#     return merge_corpus_pieces(corpus_name, num_corpus_pieces[corpus_name], path)
-
-
-
-# this might not fit in memory.
+# this might not fit in memory. in that case, do as truecase_corpuses() does,
+# and load and process single piece at a time.
 def merge_corpus_pieces(corpus_name, num_pieces, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/stanza_outputs/'):
     merged_corpus = []
     for piece_number in range(1, num_pieces+1):

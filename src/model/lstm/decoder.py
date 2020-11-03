@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from math import sqrt
 
 from src.model.lstm.beam_search_utils import initialize_beams, expand_beams, update_beams, write_finished_translations
 
@@ -16,16 +17,17 @@ class Decoder(nn.Module):
         self.input_size = hyperparams["dec_input_size"]
         self.hidden_size = hyperparams["dec_hidden_size"]
         self.num_layers = hyperparams["dec_num_layers"]
-        self.dropout = hyperparams["dec_dropout"]
+        self.lstm_dropout = hyperparams["dec_lstm_dropout"]
         self.project_att_states = hyperparams["attention_layer"]
         self.attention = hyperparams["attention_fn"] != "none"
         self.device = hyperparams["device"]
 
         if self.attention:
             if hyperparams["attention_fn"] == "dot_product":
-                self.attend = self.dot_product_attn
+                self.scaled = False
             elif hyperparams["attention_fn"] == "scaled_dot_product":
-                self.attend = self.scaled_dot_product_attn
+                self.scaled = True
+                self.sqrt_hs = sqrt(self.hidden_size)
             else:
                 raise NameError(f"specified an unsupported attention mechanism: {hyperparams['attention_fn']}")
         
@@ -35,7 +37,7 @@ class Decoder(nn.Module):
 
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)
-        self.lstm = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, dropout=self.dropout, batch_first=True)
+        self.lstm = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, dropout=self.lstm_dropout, batch_first=True)
 
         # whether or not we include an additional layer that projects
         # attentional states back to hidden_size influences size of output matrix.
@@ -49,7 +51,8 @@ class Decoder(nn.Module):
             self.out = nn.Linear(self.hidden_size, self.vocab_size)
         else:
             self.out = nn.Linear(2*self.hidden_size, self.vocab_size)
-
+        
+        self.dropout_layer = nn.Dropout(p=hyperparams["dec_dropout"], inplace=True)
         # use same matrix for embedding target words as for
         # predicting probability distributions over those words.
         if hyperparams["tie_weights"]:
@@ -71,6 +74,9 @@ class Decoder(nn.Module):
             packed_input = pack_padded_sequence(embs, decoder_inputs["lengths"], batch_first=True)
             packed_output, _ = self.lstm(packed_input, initial_state) # (total_len x hidden_size)
             # (where total_len is the total number of non-pad tokens in the batch).
+            
+            # dropout applied prior to computing attention.
+            self.dropout_layer(packed_output.data)
             if self.attention:
                 decoder_states, _ = pad_packed_sequence(packed_output, batch_first=True) # (bsz x max_trg_len x hidden_size)
                 attentional_states = self.attend(decoder_states, encoder_states, decoder_inputs["mask"]) # (bsz x max_trg_len x 2*hidden_size)
@@ -100,10 +106,12 @@ class Decoder(nn.Module):
     # -each of the max_trg_len decoder states in queries
     # computes attention over same set of encoder states, so dim 1 of mask
     # broadcasts over each query).
-    def dot_product_attn(self, queries, keys, mask):
+    def attend(self, queries, keys, mask):
         # entry i,j,k holds dot product of query j (hidden state of decoder timestep j)
         # with key k (hidden state of encoder timestep k), for i'th sequence of batch.
         scores = torch.bmm(queries, keys.transpose(1,2)) # (bsz x max_trg_len x max_src_len)
+        if self.scaled:
+            scores /= self.sqrt_hs
         # everywhere mask holds a 1, fill the corresponding entry of scores with negative infinity.
         # -> this overwrites the dot products with encoder states of pad tokens, 
         # so when apply softmax, their weight gets set to zero.
@@ -118,10 +126,6 @@ class Decoder(nn.Module):
         attentional_states = torch.cat((contexts, queries), dim=2) # (bsz x max_trg_len x 2*hidden_size)
 
         return attentional_states
-
-
-    def scaled_dot_product_attn(self):
-        pass
 
 
     def set_inference_alg(self, inference_alg="greedy_search"):

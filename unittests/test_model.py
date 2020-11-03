@@ -36,6 +36,17 @@ def test_default_subword_model():
     predict_train_data(hyperparams, train_batches, dev_batches, ref_corpuses["train.en"], vocabs["idx_to_trg_word"], checkpoint_path)
     
 
+# default model, except divides scores by scaling factor inside attention fn.
+def test_scaled_attn():
+    hyperparams = import_configs(config_path=config_path, unittesting=True)
+    hyperparams["attention_fn"] = "scaled_dot_product"
+    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+                        corpus_path=corpus_path, overfit=True, write=False
+                        )
+
+    predict_train_data(hyperparams, train_batches, dev_batches, ref_corpuses["train.en"], vocabs["idx_to_trg_word"], checkpoint_path)
+    
+
 # ensure still works on cpu.
 # must change runtime type to cpu before performing this test
 # def test_default_word_model_cpu():

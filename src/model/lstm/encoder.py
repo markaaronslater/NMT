@@ -14,7 +14,7 @@ class Encoder(nn.Module):
         self.hidden_size = hyperparams["enc_hidden_size"]
         self.num_layers = hyperparams["enc_num_layers"]
         self.decoder_num_layers = hyperparams["dec_num_layers"] # final_to_first_initializer needs to know how many layers decoder has
-        self.dropout = hyperparams["enc_dropout"]
+        self.lstm_dropout = hyperparams["enc_lstm_dropout"]
         self.bidirectional = hyperparams["bidirectional"]
         self.reverse_src = hyperparams["reverse_src"]
         self.device = hyperparams["device"]
@@ -27,13 +27,13 @@ class Encoder(nn.Module):
 
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)
-        self.lstm = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, bidirectional=self.bidirectional, dropout=self.dropout, batch_first=True)
+        self.lstm = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, bidirectional=self.bidirectional, dropout=self.lstm_dropout, batch_first=True)
+        self.dropout_layer = nn.Dropout(p=hyperparams["enc_dropout"], inplace=True)
         if self.bidirectional:
             # uses separate sets of parameters to construct the states to compute attention with,
             # and the state for initializing the decoder hidden state.
             self.bridge = nn.Linear(2*self.hidden_size, self.hidden_size)
             self.project_keys = nn.Linear(2*self.hidden_size, self.hidden_size)
-
 
     def forward(self, encoder_inputs):
         embs = self.embed(encoder_inputs["in"])
@@ -41,8 +41,10 @@ class Encoder(nn.Module):
         packed_output, (hn, cn) = self.lstm(packed_input)
         encoder_states, _ = pad_packed_sequence(packed_output, batch_first=True)
         # -> encoder_states is 3D tensor of size (bsz x max_src_len x num_directions*encoder_hidden_size)
-        del packed_input, packed_output
+        # dropout applied prior to projecting back to decoder hidden size.
+        self.dropout_layer(encoder_states)
 
+        del packed_input, packed_output
         initial_h, initial_c = self.initialize_decoder_state(hn, cn)
         # -> initial_h and initial_c are each 3D tensors of size (decoder_num_layers x bsz x decoder_hidden_size)
 

@@ -87,6 +87,12 @@ def constrain_configs(hyperparams):
     if hyperparams['tie_weights']:
         assert hyperparams['dec_input_size'] == hyperparams['dec_hidden_size']
 
+    # lstm dropout parameter only applies to non-final lstm layers
+    if hyperparams['enc_num_layers'] == 1:
+        assert hyperparams['enc_lstm_dropout'] == 0.0
+    if hyperparams['dec_num_layers'] == 1:
+        assert hyperparams['dec_lstm_dropout'] == 0.0 
+
 
 
 # use mostly the same default hyperparams as when actually training, but overwrite
