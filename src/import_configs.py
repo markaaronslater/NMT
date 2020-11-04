@@ -55,7 +55,7 @@ def process_configs(hyperparams):
         else:
             raise ValueError(f"error: provided a non-integer value for {hp}: {hyperparams[hp]}. see readme for proper input formats.")
 
-    bool_hyperparams = [    "early_stopping", "from_scratch", "bidirectional", "project",
+    bool_hyperparams = [    "early_stopping", "bidirectional", "project",
                             "reverse_src", "tie_weights", "attention_layer"]
     for hp in bool_hyperparams:
         if hyperparams[hp] in ["True", "False"]:
@@ -86,7 +86,13 @@ def constrain_configs(hyperparams):
     assert (hyperparams["attention_fn"] != "none" or not hyperparams["attention_layer"])
 
     if hyperparams['tie_weights']:
-        assert hyperparams['dec_input_size'] == hyperparams['dec_hidden_size']
+        if hyperparams["attention_fn"] != "none":
+            # -if use attention, must apply attention layer to project
+            # attentional states to input_size.
+            assert hyperparams["attention_layer"]
+        else:
+            # -if dn use attention, then input_size must equal hidden_size.
+            assert hyperparams["dec_hidden_size"] == hyperparams["dec_input_size"]
 
     # lstm dropout parameter only applies to non-final lstm layers
     if hyperparams['enc_num_layers'] == 1:
@@ -106,9 +112,11 @@ def overwrite_configs(hyperparams):
     hyperparams["total_epochs"] = 100
     hyperparams["enc_hidden_size"] = 1500 # ensure model is of sufficient capacity
     hyperparams["dec_hidden_size"] = 1500
-    hyperparams["enc_dropout"] = 0 # ensure regularization turned off
-    hyperparams["dec_dropout"] = 0
-    hyperparams["L2_reg"] = 0
+    hyperparams["enc_dropout"] = 0. # ensure regularization turned off
+    hyperparams["dec_dropout"] = 0.
+    hyperparams["enc_lstm_dropout"] = 0.
+    hyperparams["dec_lstm_dropout"] = 0.
+    hyperparams["L2_reg"] = 0.
     hyperparams["src_k"] = 200 # set large enough such that every word included in vocab (or else will not achieve BLEU of 100)
     hyperparams["trg_k"] = 200
     hyperparams["src_thres"] = 1 # every word included in vocab

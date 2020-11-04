@@ -14,8 +14,7 @@ from src.preprocessing.build_batches import get_batches
 def construct_model_data(*corpus_names,
         hyperparams={},
         corpus_path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/',
-        data_path='/content/gdrive/My Drive/NMT/data/',
-        model_name='my_model',
+        checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/my_model/',
         src_vocab_file='vocab.de',
         trg_vocab_file='vocab.en',
         overfit=False,
@@ -34,6 +33,9 @@ def construct_model_data(*corpus_names,
     # now that know the vocab sizes, can treat them as hyperparameters.
     hyperparams["src_vocab_size"] = len(vocabs["src_word_to_idx"])
     hyperparams["trg_vocab_size"] = len(vocabs["trg_word_to_idx"])
+    print(f"src vocab size: {hyperparams['src_vocab_size']}")
+    print(f"trg vocab size: {hyperparams['trg_vocab_size']}")
+
     # not technically hyperparams, but include special indices for convenience:
     sos_idx = vocabs["trg_word_to_idx"]["<sos>"]
     eos_idx = vocabs["trg_word_to_idx"]["<eos>"]
@@ -50,27 +52,38 @@ def construct_model_data(*corpus_names,
     # package corpuses up into batches of model inputs, along with other necessary
     # data, such as masks for attention mechanism, lengths for efficient
     # packing/unpacking of PackedSequence objects, etc.
-    train_batches, dev_batches, test_batches = get_batches(corpuses, train_bsz=hyperparams["train_bsz"], dev_bsz=hyperparams["dev_bsz"], test_bsz=hyperparams["test_bsz"], device=hyperparams["device"], overfit=overfit)
+    train_batches, dev_batches, _ = get_batches(corpuses, train_bsz=hyperparams["train_bsz"], dev_bsz=hyperparams["dev_bsz"], test_bsz=hyperparams["test_bsz"], device=hyperparams["device"], overfit=overfit)
     
-    # lastly, even though independent of model, include the references for convenience.
-    ref_corpuses = get_references(overfit=overfit)
 
     # can directly be loaded to instantiate and then train a model.
     model_data = {
         "train_batches":train_batches,
         "dev_batches":dev_batches,
-        "test_batches":test_batches,
         "idx_to_trg_word":vocabs["idx_to_trg_word"],
-        "ref_corpuses":ref_corpuses,
         "hyperparams":hyperparams
     }
 
     if write:
-        dump(model_data, open(f"{data_path}{model_name}.pkl", 'wb'))
+        dump(model_data, open(f"{checkpoint_path}model_data.pkl", 'wb'))
+        # so can easily observe which sets of hyperparameters give
+        # rise to which model training stats, dev set bleu stats, etc.
+        with open(f"{checkpoint_path}model_train_stats.txt", 'w') as f:
+            for hp in hyperparams:
+                f.write(f"{hp}: {hyperparams[hp]}")
+                f.write('\n')
+            f.write('\n\n\n\n\n')
+
+
+
+
+
+
+
+            
 
     # for convenience in unit tests
-    return train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams
+    return train_batches, dev_batches, vocabs, hyperparams
 
 
-def retrieve_model_data(data_path='/content/gdrive/My Drive/NMT/data/', model_name='my_model'):
-    return load(open(f"{data_path}{model_name}.pkl", 'rb'))
+def retrieve_model_data(checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/my_model/'):
+    return load(open(f"{checkpoint_path}model_data.pkl", 'rb'))

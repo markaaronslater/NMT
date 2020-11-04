@@ -1,11 +1,10 @@
 early_stopping=True
 early_stopping_threshold=5
-from_scratch=True
-total_epochs=30
+total_epochs=60
 learning_rate=0.001
 L2_reg=0.0
 optimization_alg=Adam
 device=cuda:0
-train_bsz=32
-dev_bsz=32
-test_bsz=16
+train_bsz=64
+dev_bsz=64
+test_bsz=32

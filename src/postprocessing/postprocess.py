@@ -29,6 +29,11 @@ def postprocess(translation_batches, idx_to_trg_word, eos_idx, vocab_type="subwo
     md = MosesDetokenizer(lang='en')
     translations = [md.detokenize(translation) for translation in translations]
 
+    # Moses detokenizer is not fully compatible with Stanza tokenization
+    # scheme, which 
+    # fill in some of the gaps in Moses detokenizer.
+    translations = custom_detokenize(translations)
+
     return translations
 
 
@@ -104,3 +109,15 @@ def desegment_subwords(translations):
         desegmented_translations.append(desegmented.split())
 
     return desegmented_translations
+
+
+
+def custom_detokenize(translations):
+    #print("applying detok")
+    detok_translations = []
+    for translation in translations:
+        detok = translation.replace(" n't", "n't")
+        detok = detok.replace(" - ", "-")
+        detok_translations.append(detok)
+
+    return detok_translations

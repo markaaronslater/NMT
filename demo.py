@@ -1,4 +1,5 @@
 import torch
+from subword_nmt.apply_bpe import BPE
 
 from src.preprocessing.truecase import truecase_sentence, should_lower_de
 from src.predict import predict
@@ -9,13 +10,21 @@ from src.predict import predict
 # so that conforms to this spec.
 # download and initialize Stanza processors in Colab notebook, and pass as param.
 # translator is pre-trained NMT model.
-def translate_single_sentence(input, stanza_processor, translator, idx_to_trg_word, device):
+
+### change so that does list of sentences. to show off inference speed
+def translate_single_sentence(input, stanza_processor, translator, idx_to_trg_word, vocab_file, device):
     doc = stanza_processor(input) # returns Document object
     sent = doc.sentences[0] # extract Sentence object from singleton list of Sentences 
     truecase_sentence(sent, should_lower_de)
     sent = [word.text for word in sent.words]
 
+    #subword_vocab is a set, not a dict...
     #### apply learned bpe vocab to the sentence
+    bpe = BPE(args.codes, args.merges, args.separator, subword_vocab, args.glossaries) 
+    args.output.write(bpe.process_line(line, args.dropout)) 
+
+
+    # apply vocab
 
     src_len = len(sent)
     zero = torch.zeros(1, device=device, dtype=torch.long)

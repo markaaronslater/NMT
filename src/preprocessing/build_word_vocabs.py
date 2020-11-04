@@ -37,10 +37,7 @@ def get_word_counts(corpus):
 # threshold frequencies, respectively.
 def trim_vocabs_by_thres(src_counter, trg_counter, src_thres=2, trg_thres=2):
     src_vocab_words = trim_vocab_by_thres(src_counter, src_thres)
-    print(f"length of src vocab after trimming: {len(src_vocab_words)}")
-
     trg_vocab_words = trim_vocab_by_thres(trg_counter, trg_thres)
-    print(f"length of trg vocab after trimming: {len(trg_vocab_words)}")
 
     return src_vocab_words, trg_vocab_words
 
@@ -53,10 +50,7 @@ def trim_vocab_by_thres(counter, thres=2):
 # most frequent words of trg vocab.
 def trim_vocabs_by_topk(src_counter, trg_counter, src_k=30000, trg_k=30000):
     src_vocab_words = trim_vocab_by_topk(src_counter, src_k)
-    print(f"length of src vocab after trimming: {len(src_vocab_words)}")
-
     trg_vocab_words = trim_vocab_by_topk(trg_counter, trg_k)
-    print(f"length of trg vocab after trimming: {len(trg_vocab_words)}")
 
     return src_vocab_words, trg_vocab_words
 

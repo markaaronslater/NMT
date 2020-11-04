@@ -4,6 +4,8 @@ import time, random
 
 from src.predict import predict
 from src.evaluate import evaluate
+from src.preprocessing.preprocess import retrieve_model_data
+from src.preprocessing.corpus_utils import get_references
 from src.model.lstm.model import EncoderDecoder
 
 # -train_batches holds training data as tensors.
@@ -31,31 +33,45 @@ from src.model.lstm.model import EncoderDecoder
 # and the best model found so far, so upon termination
 # (by meeting early-stopping threshold or otherwise),
 # can return the best model for later predicting the test set.
-def train(hyperparams, train_batches, dev_batches, dev_references,
-        idx_to_trg_word, checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/',
-        save=True):
+
+# train a model on preprocessed data inside checkpoint path, of hyperparameters inside checkpoint path.
+def train(checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/my_model/',
+        from_scratch=True, save=True, overfit=False):
+    ### instantiate model ###
+    model_data = retrieve_model_data(checkpoint_path=checkpoint_path)
+    train_batches = model_data["train_batches"]
+    dev_batches = model_data["dev_batches"]
+    idx_to_trg_word = model_data["idx_to_trg_word"]
+    hyperparams = model_data["hyperparams"]
+    dev_references = get_references(overfit=overfit)
+    model = initialize_model(hyperparams)
+    optimizer = initialize_optimizer(model, hyperparams)
+
     ce_loss = torch.nn.CrossEntropyLoss()
     total_epochs = hyperparams["total_epochs"]
-    from_scratch = hyperparams["from_scratch"]
     early_stopping = hyperparams["early_stopping"]
     threshold = hyperparams["early_stopping_threshold"]
 
+    
     if from_scratch:
-        model = initialize_model(hyperparams)
-        optimizer = initialize_optimizer(model, hyperparams)
-        start_epoch, best_bleu, prev_bleu, bad_epochs_count = 0, 0, 0, 0
-        open(f"{checkpoint_path}model_train_stats.txt", 'w').close() # clear model_train_stats.txt
+        start_epoch, best_bleu, prev_bleu, bad_epochs_count = 1, 0, 0, 0
     else:
         # resume training previous model checkpoint
-        model, optimizer, epoch, epoch_loss, bleu, prev_bleu, best_bleu, bad_epochs_count = load_checkpoint(hyperparams, checkpoint_path, "most_recent_model")
+        model, optimizer, epoch, epoch_loss, bleu, prev_bleu, best_bleu, bad_epochs_count = load_checkpoint(model, optimizer, checkpoint_path, "most_recent_model")
         start_epoch = epoch + 1
-        print(f"loaded model checkpoint from epoch: {epoch}")
-        print(f"loss: {epoch_loss}, bleu: {bleu}, prev_bleu: {prev_bleu}, \
-                best_bleu: {best_bleu}, bad_epochs_count: {bad_epochs_count}")
-        print(f"resuming training from epoch {start_epoch}")
-        print()
+        if start_epoch == 1:
+            print(f"training model from scratch")
+        else:
+            print(f"loaded model checkpoint from epoch: {epoch}")
+            print(f"loss: {epoch_loss}, bleu: {bleu}, prev_bleu: {prev_bleu}, \
+                    best_bleu: {best_bleu}, bad_epochs_count: {bad_epochs_count}")
+            print(f"resuming training from epoch {start_epoch}")
+            print()
 
-    for epoch in range(start_epoch, total_epochs):
+
+
+    ### training loop ###
+    for epoch in range(start_epoch, total_epochs+1):
         epoch_loss = 0.
         epoch_start_time = time.time()
         random.shuffle(train_batches)
@@ -82,7 +98,7 @@ def train(hyperparams, train_batches, dev_batches, dev_references,
                 store_checkpoint(model, optimizer, epoch, epoch_loss, bleu, prev_bleu, best_bleu, bad_epochs_count, checkpoint_path, "best_model")
             if bad_epochs_count == threshold:
                 # early-stopping threshold met
-                best_model, epoch_loss = load_checkpoint(hyperparams, checkpoint_path, "best_model")
+                best_model, epoch_loss = load_checkpoint(model, optimizer, checkpoint_path, "best_model")
                 return best_model, epoch_loss
 
         if save:
@@ -91,7 +107,7 @@ def train(hyperparams, train_batches, dev_batches, dev_references,
         prev_bleu = bleu
 
     if early_stopping:
-        best_model = load_checkpoint(hyperparams, checkpoint_path, "best_model")
+        best_model = load_checkpoint(model, optimizer, checkpoint_path, "best_model")
         return best_model, epoch_loss
     else:
         return model, epoch_loss
@@ -155,15 +171,13 @@ def store_checkpoint(model, optimizer, epoch, epoch_loss, bleu, prev_bleu,
         'prev_bleu':prev_bleu,
         'best_bleu':best_bleu,
         'bad_epochs_count':bad_epochs_count
-    }, checkpoint_path + name + '.tar')
+    }, f"{checkpoint_path}{name}.tar")
 
 
 # name in ["best_model", "most_recent_model"]
-def load_checkpoint(hyperparams, checkpoint_path, name):
-    checkpoint = torch.load(checkpoint_path + name + '.tar') 
-    model = initialize_model(hyperparams)
+def load_checkpoint(model, optimizer, checkpoint_path, name):
+    checkpoint = torch.load(f"{checkpoint_path}{name}.tar") 
     model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer = initialize_optimizer(model, hyperparams)
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     # if loading most_recent_model, then resuming training,
@@ -171,9 +185,9 @@ def load_checkpoint(hyperparams, checkpoint_path, name):
     # but if loading best_model, finished training and now want to
     # predict test set, so just return the model and its loss.
     if name == "most_recent_model":
-        return model, optimizer, checkpoint['epoch'], 
-        checkpoint['epoch_loss'], checkpoint['bleu'],
-        checkpoint['prev_bleu'], checkpoint['best_bleu'],
+        return model, optimizer, checkpoint['epoch'], \
+        checkpoint['epoch_loss'], checkpoint['bleu'], \
+        checkpoint['prev_bleu'], checkpoint['best_bleu'], \
         checkpoint['bad_epochs_count']
     else:
         return model, checkpoint['epoch_loss']

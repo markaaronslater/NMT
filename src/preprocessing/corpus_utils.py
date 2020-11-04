@@ -64,12 +64,12 @@ def get_references(path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', 
     ref_corpuses = {}
     if not overfit:
         # only one set of references, so construct singleton list of lists of sentences.
-        ref_corpuses["dev.en"] = [read_corpus("dev.en", path=path)]
+        return [read_corpus("dev.en", path=path)]
         #ref_corpuses["test.en"] = [read_corpus("test.en", path=path)]
     else:
-        ref_corpuses["train.en"] = [read_corpus("train.en", path=path, num=10)]
+        return [read_corpus("train.en", path=path, num=10)]
 
-    return ref_corpuses
+    #return ref_corpuses
 
 
 # return true if is a source corpus, and false if is a target corpus

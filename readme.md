@@ -14,6 +14,16 @@ coming soon:
 * implements intelligent batching so that number of pad tokens in batches (which contain variable-length sequences) is minimized for both training and inference.
 * training uses PackedSequence objects to avoid needless computation inside lstm layer(s).
 
+**Compact yet performant:**
+* employs variety of x in order to obtain BLEU score of 29 on y, even though uses only z total parameters (requires roughly Y GB of memory to train on Colab GPU, when use train and dev bsz's of 64), by using advanced techniques like weight sharing.
+easily fits in gpu memory of free cloud providers, like Google Colab
+requires only modestly sized 
+default encoder and decoder each only contain single lstm layer.
+encoder lstm is bidirectional, and its states are projected
+evaluated using sacrebleu, the most strict and reliable bleu score calculator.
+
+
+
 **Supports variety of model, training and prediction features, including:**
 * scaled and standard dot product attention mechanisms.
 * beam search and greedy search inference algorithms.
@@ -25,6 +35,10 @@ coming soon:
 
 **Robust and convenient:**
 * training algorithm performs early-stopping and saves both "most-recent" (so can resume training at later date, or gracefully recover from Colab runtime disconnections, etc.) and "best-so-far" (so can extract for later predicting test set, etc.) model checkpoints in Google Drive.
+* automatically logs hyperparameter settings used by given model inside its checkpoints folder, along with training stats and dev set bleu scores, to facilitate hyperparameter search.
+* train model from scratch or resume training a checkpoint where left off
+* automates organization of models within file system 
+
 
 **Corpus preprocessing**
 
@@ -70,6 +84,9 @@ notebooks use Google Drive interface when run in Google Colab environment, so th
   * b) run unit tests to show correctness of model implementations, or
   * c) load a pre-trained model checkpoint to determine BLEU score on test set.
 
+
+  step 0 - make necessary folders not included in repo, e.g., checkpoints, stanza_outputs, truecased, subword_segmented
+  
   step 1 - apply Stanza processors, which perform tokenization, multi-word token expansion, and part-of-speech tagging
   * processor outputs are saved to pickle files with the prefix "stanza_" inside corpuses/iwslt16_en_de/stanza_outputs/
   * each corpus is processed in pieces, bc entire output does not fit in memory.
@@ -132,7 +149,6 @@ Training Options | Default Setting | Possible Settings | Comments
 --------| --------------- | ----------------- | --------
 early_stopping | True | boolean | whether or not to quit training early if bleu scores on dev set do not improve for <early_stopping_threshold> epochs in a row (see below)
 early_stopping_threshold | 5 | int | 
-from_scratch | True | boolean | if False, then loads and resumes training a partially trained model checkpoint inside checkpoints
 total_epochs | 30 | int | max number of epochs (can cut short if early-stopping)
 learning_rate | .001 | float | 
 L2_reg | 0.0 | float | weight decay of optimizer

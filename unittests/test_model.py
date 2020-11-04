@@ -15,11 +15,12 @@ corpus_path = '/content/gdrive/My Drive/NMT/unittests/first_ten_sentences/'
 # in import_configs.py), except for those overridden inside test method.
 
 # overfit to first 10 sentences of training set
+# overview: scaled_dot_product attn, 1 lstm layer, attention layer, tied weights.
 def test_default_word_model():
     hyperparams = import_configs(config_path=config_path, unittesting=True)
     hyperparams["vocab_type"] = "word"
     hyperparams["trim_type"] = "top_k"
-    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
                         corpus_path=corpus_path, overfit=True, write=False
                         )
 
@@ -29,18 +30,51 @@ def test_default_word_model():
 def test_default_subword_model():
     hyperparams = import_configs(config_path=config_path, unittesting=True)
     hyperparams["vocab_type"] = "subword_joint"
-    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
                         corpus_path=corpus_path, overfit=True, write=False
                         )
 
     predict_train_data(hyperparams, train_batches, dev_batches, ref_corpuses["train.en"], vocabs["idx_to_trg_word"], checkpoint_path)
     
 
-# default model, except divides scores by scaling factor inside attention fn.
-def test_scaled_attn():
+# default word model, except dn divide scores by scaling factor inside attention fn.
+def test_attn():
     hyperparams = import_configs(config_path=config_path, unittesting=True)
-    hyperparams["attention_fn"] = "scaled_dot_product"
-    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+    hyperparams["vocab_type"] = "word"
+    hyperparams["trim_type"] = "top_k"
+    hyperparams["attention_fn"] = "dot_product"
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+                        corpus_path=corpus_path, overfit=True, write=False
+                        )
+
+    predict_train_data(hyperparams, train_batches, dev_batches, ref_corpuses["train.en"], vocabs["idx_to_trg_word"], checkpoint_path)
+    
+
+# no weight tying, no additional attention layer
+def test_no_tying():
+    hyperparams = import_configs(config_path=config_path, unittesting=True)
+    hyperparams["vocab_type"] = "word"
+    hyperparams["trim_type"] = "top_k"
+    hyperparams["attention_layer"] = False
+    hyperparams["tie_weights"] = False
+
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+                        corpus_path=corpus_path, overfit=True, write=False
+                        )
+
+    predict_train_data(hyperparams, train_batches, dev_batches, ref_corpuses["train.en"], vocabs["idx_to_trg_word"], checkpoint_path)
+    
+
+# no weight tying and no attention mechanism.
+def test_no_attn_no_tying():
+    hyperparams = import_configs(config_path=config_path, unittesting=True)
+    hyperparams["vocab_type"] = "word"
+    hyperparams["trim_type"] = "top_k"
+    hyperparams["attention_fn"] = "none"
+    hyperparams["attention_layer"] = False
+    hyperparams["tie_weights"] = False
+
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
                         corpus_path=corpus_path, overfit=True, write=False
                         )
 
@@ -53,7 +87,7 @@ def test_dropout():
     hyperparams["enc_dropout"] = 0.2
     hyperparams["dec_dropout"] = 0.2
 
-    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
                         corpus_path=corpus_path, overfit=True, write=False
                         )
 
@@ -82,7 +116,7 @@ def test_uni_no_attn():
     hyperparams["attention_fn"] = "none"
 
     constrain_configs(hyperparams) # ensure passes constraint-check
-    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
                         corpus_path=corpus_path, overfit=True, write=False
                         )
 
@@ -98,7 +132,7 @@ def test_layer_to_layer_uni_no_attn():
     hyperparams["attention_fn"] = "none"
     hyperparams["bidirectional"] = False
     constrain_configs(hyperparams) # ensure passes constraint-check
-    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
                         corpus_path=corpus_path, overfit=True, write=False
                         )
 
@@ -114,7 +148,7 @@ def test_final_to_first_uni_no_attn():
     hyperparams["attention_fn"] = "none"
     hyperparams["bidirectional"] = False
     constrain_configs(hyperparams) # ensure passes constraint-check
-    train_batches, dev_batches, test_batches, vocabs, ref_corpuses, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+    train_batches, dev_batches, vocabs, hyperparams = construct_model_data("train.de", "train.en", hyperparams=hyperparams,
                         corpus_path=corpus_path, overfit=True, write=False
                         )
 

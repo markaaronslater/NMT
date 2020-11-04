@@ -20,6 +20,9 @@ class Decoder(nn.Module):
         self.lstm_dropout = hyperparams["dec_lstm_dropout"]
         self.project_att_states = hyperparams["attention_layer"]
         self.attention = hyperparams["attention_fn"] != "none"
+        self.tie_weights = hyperparams["tie_weights"]
+        self.add_drop_layer = hyperparams["dec_dropout"] > 0
+        self.out_drop = hyperparams["dec_dropout"]
         self.device = hyperparams["device"]
 
         if self.attention:
@@ -37,6 +40,10 @@ class Decoder(nn.Module):
 
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)
+        ### added ###
+        self.embed.weight.data.uniform_(-.1, .1)
+        ##############
+
         self.lstm = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, dropout=self.lstm_dropout, batch_first=True)
 
         # whether or not we include an additional layer that projects
@@ -44,23 +51,32 @@ class Decoder(nn.Module):
         if not self.attention:
             self.out = nn.Linear(self.hidden_size, self.vocab_size)
         elif self.project_att_states:
-            # employ an additional layer that projects hidden states back
-            # to hidden_size before passing thru output layer.
-            self.attention_layer = nn.Linear(2*self.hidden_size, self.hidden_size)
-            # also influences size of output matrix.
-            self.out = nn.Linear(self.hidden_size, self.vocab_size)
+            # adds additional layer between attention mechanism and output.
+            if self.tie_weights:
+                # use same matrix for embedding target words as for
+                # predicting probability distributions over those words.
+                self.attention_layer = nn.Linear(2*self.hidden_size, self.input_size)
+                # also influences size of output matrix.
+                self.out = nn.Linear(self.input_size, self.vocab_size)
+            else:
+                self.attention_layer = nn.Linear(2*self.hidden_size, self.hidden_size)
+                self.out = nn.Linear(self.hidden_size, self.vocab_size)
         else:
             self.out = nn.Linear(2*self.hidden_size, self.vocab_size)
         
-        self.dropout_layer = nn.Dropout(p=hyperparams["dec_dropout"])
-        # use same matrix for embedding target words as for
-        # predicting probability distributions over those words.
-        if hyperparams["tie_weights"]:
+        if self.tie_weights:
             # embed and out are each (vocab_size x input_size).
             #   -> in fwd pass, out's transpose is multiplied on the right:
             #      h * out^T + bias
             self.out.weight = self.embed.weight
 
+        #### added #####
+        self.out.bias.data.zero_()
+        ################
+        # if self.add_drop_layer:
+        #     self.dropout_layer = nn.Dropout(p=hyperparams["dec_dropout"])
+        
+            
 
     # inference uses sampling: predicts next word given words it previously predicted.
     # -> must predict single token at a time, so does not use PackedSequences.
@@ -75,22 +91,37 @@ class Decoder(nn.Module):
             packed_output, _ = self.lstm(packed_input, initial_state) # (total_len x hidden_size)
             # (where total_len is the total number of non-pad tokens in the batch).
             
-            
             if self.attention:
                 decoder_states, _ = pad_packed_sequence(packed_output, batch_first=True) # (bsz x max_trg_len x hidden_size)
                 # dropout applied prior to computing attention.
-                decoder_states = self.dropout_layer(decoder_states)
-                attentional_states = self.attend(decoder_states, encoder_states, decoder_inputs["mask"]) # (bsz x max_trg_len x 2*hidden_size)
-                attentional_states = pack_padded_sequence(attentional_states, decoder_inputs["lengths"], batch_first=True).data # (total_len x 2*hidden_size)
+                # if self.add_drop_layer:
+                #     decoder_states = self.dropout_layer(decoder_states)
+                #### added #####
+                bsz = decoder_states.size(0)
+                out_mask = torch.nn.functional.dropout(torch.ones(bsz, 1, self.hidden_size).cuda(), p=self.out_drop, training=self.training)
+                decoder_states = decoder_states * out_mask
+                ################
+                attention_states = self.attend(decoder_states, encoder_states, decoder_inputs["mask"]) # (bsz x max_trg_len x 2*hidden_size)
+                attention_states = pack_padded_sequence(attention_states, decoder_inputs["lengths"], batch_first=True).data # (total_len x 2*hidden_size)
             else:
-                attentional_states = packed_output.data
-                attentional_states = self.dropout_layer(attentional_states)
+                attention_states = packed_output.data # (total_len x hidden_size)
+                # if self.add_drop_layer:
+                #     attention_states = self.dropout_layer(attention_states)
+                #### added #####
+                bsz = attention_states.size(0)
+                out_mask = torch.nn.functional.dropout(torch.ones(bsz, 1, self.hidden_size).cuda(), p=self.out_drop, training=self.training)
+                attention_states = attention_states * out_mask
+                ################
 
             del packed_input, packed_output
             if self.project_att_states:
-                attentional_states = torch.tanh(self.attention_layer(attentional_states)) # (total_len x hidden_size)
-            
-            dists = self.out(attentional_states) # (total_len x vocab_size)
+                #att_layer_states = F.relu(self.attention_layer(attention_states)) # (total_len x input_size) if tie_weights. else (total_len x hidden_size)
+                ### change to tanh ###
+                att_layer_states = torch.tanh(self.attention_layer(attention_states)) # (total_len x input_size) if tie_weights. else (total_len x hidden_size)
+            else:
+                att_layer_states = attention_states # (total_len x hidden_size)
+
+            dists = self.out(att_layer_states) # (total_len x vocab_size)
             # -> for each sequence of batch, for each time step,
             # holds predicted logits over next words.
 
@@ -113,7 +144,9 @@ class Decoder(nn.Module):
         # with key k (hidden state of encoder timestep k), for i'th sequence of batch.
         scores = torch.bmm(queries, keys.transpose(1,2)) # (bsz x max_trg_len x max_src_len)
         if self.scaled:
-            scores /= self.sqrt_hs
+            # larger hidden sizes produce dot products of greater magnitude.
+            # normalizing scores provides smoother softmax results.
+            scores.true_divide_(self.sqrt_hs) 
         # everywhere mask holds a 1, fill the corresponding entry of scores with negative infinity.
         # -> this overwrites the dot products with encoder states of pad tokens, 
         # so when apply softmax, their weight gets set to zero.
@@ -125,9 +158,9 @@ class Decoder(nn.Module):
         del scores, weights
 
         # concatenate contexts with the original decoder states
-        attentional_states = torch.cat((contexts, queries), dim=2) # (bsz x max_trg_len x 2*hidden_size)
+        attention_states = torch.cat((contexts, queries), dim=2) # (bsz x max_trg_len x 2*hidden_size)
 
-        return attentional_states
+        return attention_states
 
 
     def set_inference_alg(self, inference_alg="greedy_search"):
@@ -266,13 +299,15 @@ class Decoder(nn.Module):
     def decode_step(self, input_i, hidden, mask, encoder_states):
         output_i, (h_i, c_i) = self.lstm(input_i, hidden) # output_i is (bsz x 1 x hidden_size)
         if self.attention:
-            attentional_states_i = self.attend(output_i, encoder_states, mask).squeeze(1)
+            attention_states_i = self.attend(output_i, encoder_states, mask).squeeze(1)
             # -> (bsz x 2*hidden_size)
         else:
-            attentional_states_i = output_i.squeeze(1) # (bsz x hidden_size)
+            attention_states_i = output_i.squeeze(1) # (bsz x hidden_size)
         if self.project_att_states:
-            attentional_states_i = torch.tanh(self.attention_layer(attentional_states_i)) 
+            att_layer_states_i = F.relu(self.attention_layer(attention_states_i)) 
+        else:
+            att_layer_states_i = attention_states_i
 
-        dists_i = self.out(attentional_states_i) # (bsz x vocab_size)
+        dists_i = self.out(att_layer_states_i) # (bsz x vocab_size)
 
         return dists_i, (h_i, c_i)
