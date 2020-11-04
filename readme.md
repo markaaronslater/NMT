@@ -32,12 +32,14 @@ evaluated using sacrebleu, the most strict and reliable bleu score calculator.
 **Highly flexible and easily configurable:**
 * specify hyperparameter settings and architectural variations through set of configuration files (see options below).
 * config-importer ensures combination of settings is valid (raises assertion error).
+* several word-level vocab algs, like top_k and threshold.
 
 **Robust and convenient:**
 * training algorithm performs early-stopping and saves both "most-recent" (so can resume training at later date, or gracefully recover from Colab runtime disconnections, etc.) and "best-so-far" (so can extract for later predicting test set, etc.) model checkpoints in Google Drive.
 * automatically logs hyperparameter settings used by given model inside its checkpoints folder, along with training stats and dev set bleu scores, to facilitate hyperparameter search.
 * train model from scratch or resume training a checkpoint where left off
-* automates organization of models within file system 
+* automates organization of models within file system . 
+* streamlined training and hyperparameter search infrastructure.
 
 
 **Corpus preprocessing**

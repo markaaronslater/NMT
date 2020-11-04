@@ -42,8 +42,7 @@ def process_configs(hyperparams):
     assert hyperparams["trim_type"] in ["threshold", "top_k"]
 
     # ensure every setting provided for integer-valued hyperparams is castable as int.
-    int_hyperparams =   [   "total_epochs", "train_bsz", "dev_bsz", "test_bsz",
-                            "early_stopping_threshold", 
+    int_hyperparams =   [   "train_bsz", "dev_bsz", "test_bsz", 
                             "enc_input_size", "enc_hidden_size", "enc_num_layers",
                             "dec_input_size", "dec_hidden_size", "dec_num_layers",
                             "beam_width", "decode_slack", 
@@ -55,7 +54,7 @@ def process_configs(hyperparams):
         else:
             raise ValueError(f"error: provided a non-integer value for {hp}: {hyperparams[hp]}. see readme for proper input formats.")
 
-    bool_hyperparams = [    "early_stopping", "bidirectional", "project",
+    bool_hyperparams = [    "bidirectional", "project",
                             "reverse_src", "tie_weights", "attention_layer"]
     for hp in bool_hyperparams:
         if hyperparams[hp] in ["True", "False"]:
@@ -108,10 +107,8 @@ def overwrite_configs(hyperparams):
     hyperparams["train_bsz"] = 3
     hyperparams["dev_bsz"] = 3
     hyperparams["decode_slack"] = 30 # set large enough such that can finish predicting each of the 10 target sentences (or else will not achieve BLEU of 100)
-    hyperparams["early_stopping"] = False # let the loss go down to zero.
-    hyperparams["total_epochs"] = 100
-    hyperparams["enc_hidden_size"] = 1500 # ensure model is of sufficient capacity
-    hyperparams["dec_hidden_size"] = 1500
+    hyperparams["enc_hidden_size"] = 2000 # ensure model is of sufficient capacity
+    hyperparams["dec_hidden_size"] = 2000
     hyperparams["enc_dropout"] = 0. # ensure regularization turned off
     hyperparams["dec_dropout"] = 0.
     hyperparams["enc_lstm_dropout"] = 0.

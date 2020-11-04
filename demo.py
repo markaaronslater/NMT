@@ -12,16 +12,21 @@ from src.predict import predict
 # translator is pre-trained NMT model.
 
 ### change so that does list of sentences. to show off inference speed
-def translate_single_sentence(input, stanza_processor, translator, idx_to_trg_word, vocab_file, device):
-    doc = stanza_processor(input) # returns Document object
-    sent = doc.sentences[0] # extract Sentence object from singleton list of Sentences 
-    truecase_sentence(sent, should_lower_de)
-    sent = [word.text for word in sent.words]
+# input is list of user-provided German sentences as strings 
+def translate_single_sentence(input, stanza_processor, translator, bpe, idx_to_trg_word,
+            device='cuda:0'):
 
+    doc = stanza_processor('\n\n'.join(input)) # returns Document object
+    sentences = doc.sentences[0] # extract Sentence object from singleton list of Sentences 
+    truecased_sentences = []
+    for sent in sentences:
+        truecase_sentence(sent, should_lower_de)
+        truecased_sentences.append(' '.join([word.text for word in sent.words]))
+
+    
     #subword_vocab is a set, not a dict...
     #### apply learned bpe vocab to the sentence
-    bpe = BPE(args.codes, args.merges, args.separator, subword_vocab, args.glossaries) 
-    args.output.write(bpe.process_line(line, args.dropout)) 
+    subword_sentences = [bpe.process_line(sent) for sent in truecased_sentences]
 
 
     # apply vocab
@@ -45,3 +50,20 @@ def translate_single_sentence(input, stanza_processor, translator, idx_to_trg_wo
     translation = translations[0] # singleton batch of translations
 
     return translation
+
+
+
+
+
+
+def get_subword_vocab(corpus_path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', 
+            codes='bpe_codes', src_vocab_file='vocab.de'):
+
+    vocabs = build_subword_vocabs(corpus_path, "subword_joint", hyperparams["vocab_threshold"], src_vocab_file, trg_vocab_file)
+
+    # initalize BPE object
+    bpe = BPE(codes, vocab=subword_vocab) 
+
+
+
+    return set(vocab)

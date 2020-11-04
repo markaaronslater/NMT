@@ -6,19 +6,23 @@ from src.preprocessing.build_word_vocabs import build_word_vocabs
 from src.preprocessing.build_subword_vocabs import build_subword_vocabs
 from src.preprocessing.apply_vocab import apply_vocab
 from src.preprocessing.build_batches import get_batches
-
+from src.model_utils import initialize_model, initialize_optimizer, store_checkpoint
 # -converts all preprocessed corpuses into tensors that can be directly
 # passed to a model, and saves them to pickle files.
 # -returns corresponding hyperparameters that can be used to instantiate
 # a compatible model.
+
+# construct train, dev and test data to be used by model during training
+# and inference, so that corpus preprocessing ensured to be compatible
+# with model hyperparameters, e.g., vocab type, bsz, etc.
+# gets saved to same folder the checkpoints are stored.
 def construct_model_data(*corpus_names,
         hyperparams={},
         corpus_path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/',
         checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/my_model/',
         src_vocab_file='vocab.de',
         trg_vocab_file='vocab.en',
-        overfit=False,
-        write=True):
+        overfit=False):
     
     vocab_type = hyperparams["vocab_type"]
     # which variants of preprocessed corpuses to load depends on vocab type.
@@ -52,37 +56,41 @@ def construct_model_data(*corpus_names,
     # package corpuses up into batches of model inputs, along with other necessary
     # data, such as masks for attention mechanism, lengths for efficient
     # packing/unpacking of PackedSequence objects, etc.
-    train_batches, dev_batches, _ = get_batches(corpuses, train_bsz=hyperparams["train_bsz"], dev_bsz=hyperparams["dev_bsz"], test_bsz=hyperparams["test_bsz"], device=hyperparams["device"], overfit=overfit)
+    train_batches, dev_batches, test_batches = get_batches(corpuses, train_bsz=hyperparams["train_bsz"], dev_bsz=hyperparams["dev_bsz"], test_bsz=hyperparams["test_bsz"], device=hyperparams["device"], overfit=overfit)
     
-
-    # can directly be loaded to instantiate and then train a model.
-    model_data = {
-        "train_batches":train_batches,
+    # store initial checkpoint for a model training session,
+    # holding all mutable training session data.
+    model = initialize_model(hyperparams)
+    optimizer = initialize_optimizer(model, hyperparams)
+    epoch = 0 # how many epochs the model has trained for
+    epoch_loss = 0 # loss of last completed epoch
+    bleu = 0 # bleu score of model of current epoch on dev set 
+    prev_bleu = 0 # bleu score of model of previous epoch on dev set 
+    best_bleu = 0 # best bleu score of model on earlier epoch
+    bad_epochs_count = 0 # when reaches early_stopping_threshold, training terminates
+    store_checkpoint(model, optimizer, epoch, epoch_loss, bleu, prev_bleu,
+            best_bleu, bad_epochs_count, checkpoint_path, "most_recent_model")
+    
+    # store corresponding preprocessing of the corpuses, vocab info, and other
+    # immutable data used during training.
+    model_data = {"train_batches":train_batches,
         "dev_batches":dev_batches,
-        "idx_to_trg_word":vocabs["idx_to_trg_word"],
-        "hyperparams":hyperparams
-    }
+        "test_batches":test_batches, # for making test predictions after model is trained
+        "references":get_references(overfit=overfit),
+        "trg_word_to_idx":vocabs["trg_word_to_idx"], # for use in test_batches
+        "idx_to_trg_word":vocabs["idx_to_trg_word"], # for making dev predictions during training, and test predictions during demo
+        "src_word_to_idx":vocabs["src_word_to_idx"], # for making test predictions during demo
+        "hyperparams":hyperparams} 
 
-    if write:
-        dump(model_data, open(f"{checkpoint_path}model_data.pkl", 'wb'))
-        # so can easily observe which sets of hyperparameters give
-        # rise to which model training stats, dev set bleu stats, etc.
-        with open(f"{checkpoint_path}model_train_stats.txt", 'w') as f:
-            for hp in hyperparams:
-                f.write(f"{hp}: {hyperparams[hp]}")
-                f.write('\n')
-            f.write('\n\n\n\n\n')
+    dump(model_data, open(f"{checkpoint_path}model_data.pkl", 'wb'))
 
-
-
-
-
-
-
-            
-
-    # for convenience in unit tests
-    return train_batches, dev_batches, vocabs, hyperparams
+    # so can easily observe which sets of hyperparameters give
+    # rise to which model training stats, dev set bleu stats, etc.
+    with open(f"{checkpoint_path}model_train_stats.txt", 'w') as f:
+        for hp in hyperparams:
+            f.write(f"{hp}: {hyperparams[hp]}")
+            f.write('\n')
+        f.write('\n\n\n\n\n')
 
 
 def retrieve_model_data(checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/my_model/'):

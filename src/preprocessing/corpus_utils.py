@@ -61,7 +61,6 @@ def tokenize_corpus(corpus):
 
 # load target corpuses in format required by sacreBLEU, for evaluation of predictions.
 def get_references(path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', overfit=False):
-    ref_corpuses = {}
     if not overfit:
         # only one set of references, so construct singleton list of lists of sentences.
         return [read_corpus("dev.en", path=path)]
@@ -69,7 +68,6 @@ def get_references(path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', 
     else:
         return [read_corpus("train.en", path=path, num=10)]
 
-    #return ref_corpuses
 
 
 # return true if is a source corpus, and false if is a target corpus

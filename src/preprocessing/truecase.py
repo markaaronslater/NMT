@@ -32,7 +32,7 @@ def truecase_corpuses(*corpus_names, corpus_path='/content/gdrive/My Drive/NMT/c
 def truecase_corpus(corpus_name, truecased_path, sentences, should_lower):
     # append all corpus pieces into single truecased corpus text file.
     with open(f"{truecased_path}word_{corpus_name}", mode='a', encoding='utf-8') as f:
-        for i, sent in enumerate(sentences):
+        for sent in sentences:
             truecase_sentence(sent, should_lower)
             f.write(' '.join([word.text for word in sent.words]))
             f.write('\n')
