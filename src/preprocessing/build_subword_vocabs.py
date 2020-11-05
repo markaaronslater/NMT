@@ -29,6 +29,8 @@ def build_subword_joint_vocabs(corpus_path, vocab_type, vocab_threshold,
     get_vocab_mapping(vocab, corpus_path + src_vocab_file, vocab_threshold)
     get_vocab_mapping(vocab, corpus_path + trg_vocab_file, vocab_threshold)
 
+    #print(f"vocab: {vocab}")
+
     # pass 2 copies of each dict for compatibility with preprocess.py.
     # !!!change so not necessary.
     return {    "src_word_to_idx":vocab,
