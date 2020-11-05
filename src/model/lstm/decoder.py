@@ -41,7 +41,7 @@ class Decoder(nn.Module):
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)
         ### added ###
-        #self.embed.weight.data.uniform_(-.1, .1)
+        self.embed.weight.data.uniform_(-.1, .1)
         ##############
 
         self.lstm = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, dropout=self.lstm_dropout, batch_first=True)
@@ -71,7 +71,7 @@ class Decoder(nn.Module):
             self.out.weight = self.embed.weight
 
         #### added #####
-        #self.out.bias.data.zero_()
+        self.out.bias.data.zero_()
         ################
         # if self.add_drop_layer:
         #     self.dropout_layer = nn.Dropout(p=hyperparams["dec_dropout"])
@@ -304,7 +304,7 @@ class Decoder(nn.Module):
         else:
             attention_states_i = output_i.squeeze(1) # (bsz x hidden_size)
         if self.project_att_states:
-            att_layer_states_i = F.relu(self.attention_layer(attention_states_i)) 
+            att_layer_states_i = torch.tanh(self.attention_layer(attention_states_i)) 
         else:
             att_layer_states_i = attention_states_i
 

@@ -40,7 +40,7 @@ from src.model_utils import load_checkpoint, store_checkpoint
 # train a model on preprocessed data inside checkpoint path, of hyperparameters inside checkpoint path.
 def train(total_epochs=30, early_stopping=True, threshold=5,
             checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/my_model/',
-            save=True):
+            save=True, write=True):
     ### immutable training session data ###
     model_data = retrieve_model_data(checkpoint_path=checkpoint_path)
     train_batches = model_data["train_batches"]
@@ -73,6 +73,8 @@ def train(total_epochs=30, early_stopping=True, threshold=5,
         print(f"resuming training from epoch {start_epoch}...")
         print()
 
+    #print(f"hidden size: {model.encoder.hidden_size}")
+
     ### training loop ##############################
     for epoch in range(start_epoch, total_epochs+1):
         epoch_loss = 0.
@@ -82,7 +84,7 @@ def train(total_epochs=30, early_stopping=True, threshold=5,
             epoch_loss += training_step(model, optimizer, batch)
         epoch_time = time.time() - epoch_start_time
 
-        dev_translations, preds_time, post_time = predict(model, dev_batches, idx_to_trg_word, checkpoint_path, epoch)
+        dev_translations, preds_time, post_time = predict(model, dev_batches, idx_to_trg_word, checkpoint_path, epoch, write=write)
         bleu = evaluate(dev_translations, dev_references)
         
         model.train()

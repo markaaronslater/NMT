@@ -107,8 +107,8 @@ def overwrite_configs(hyperparams):
     hyperparams["train_bsz"] = 3
     hyperparams["dev_bsz"] = 3
     hyperparams["decode_slack"] = 30 # set large enough such that can finish predicting each of the 10 target sentences (or else will not achieve BLEU of 100)
-    hyperparams["enc_hidden_size"] = 2000 # ensure model is of sufficient capacity
-    hyperparams["dec_hidden_size"] = 2000
+    hyperparams["enc_hidden_size"] = 1500 # ensure model is of sufficient capacity
+    hyperparams["dec_hidden_size"] = 1500
     hyperparams["enc_dropout"] = 0. # ensure regularization turned off
     hyperparams["dec_dropout"] = 0.
     hyperparams["enc_lstm_dropout"] = 0.

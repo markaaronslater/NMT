@@ -28,7 +28,7 @@ def test_default_word_model(checkpoint_path='/content/gdrive/My Drive/NMT/unitte
                         )
 
     # model of sufficient capacity should be able to bring loss down to ~zero.
-    model, loss = train(total_epochs=100, early_stopping=False, checkpoint_path=checkpoint_path, save=False)
+    model, loss = train(total_epochs=100, early_stopping=False, checkpoint_path=checkpoint_path, save=False, write=False)
     assert loss < .01
 
     model_data = retrieve_model_data(checkpoint_path=checkpoint_path)
@@ -47,6 +47,44 @@ def test_default_word_model(checkpoint_path='/content/gdrive/My Drive/NMT/unitte
     bleu = evaluate(dev_translations, dev_references)
     assert bleu >= 100
 
+
+
+def test_outdrop(checkpoint_path='/content/gdrive/My Drive/NMT/unittests/checkpoints/',
+                config_path='/content/gdrive/My Drive/NMT/configs/',
+                corpus_path = '/content/gdrive/My Drive/NMT/unittests/first_ten_sentences/'
+):
+    hyperparams = import_configs(config_path=config_path, unittesting=True)
+    # use word-level vocab
+    hyperparams["vocab_type"] = "word"
+    hyperparams["trim_type"] = "top_k"
+    hyperparams["enc_dropout"] = .5
+    hyperparams["dec_dropout"] = .5
+    print(f"hidden size: {hyperparams['dec_hidden_size']}")
+
+    construct_model_data("train.de", "train.en", hyperparams=hyperparams,
+                        corpus_path=corpus_path, checkpoint_path=checkpoint_path, 
+                        overfit=True
+                        )
+
+    # model of sufficient capacity should be able to bring loss down to ~zero.
+    model, loss = train(total_epochs=100, early_stopping=False, checkpoint_path=checkpoint_path, save=False, write=False)
+    assert loss < .01
+
+    model_data = retrieve_model_data(checkpoint_path=checkpoint_path)
+    dev_batches = model_data["dev_batches"] # holds the training data, bc overfit=True
+    dev_references = model_data["references"] # holds the training data, bc overfit=True
+    idx_to_trg_word = model_data["idx_to_trg_word"]
+
+    # greedy search should be able to perfectly predict the training data.
+    dev_translations, _, _ = predict(model, dev_batches, idx_to_trg_word, checkpoint_path)
+    bleu = evaluate(dev_translations, dev_references)
+    assert bleu >= 100
+
+    # beam search should be able to perfectly predict the training data.
+    model.decoder.set_inference_alg("beam_search")
+    dev_translations, _, _ = predict(model, dev_batches, idx_to_trg_word, checkpoint_path)
+    bleu = evaluate(dev_translations, dev_references)
+    assert bleu >= 100
 
 
 # def test_default_subword_model():
