@@ -1,4 +1,5 @@
 import torch
+from pickle import load
 
 from src.model.lstm.model import EncoderDecoder
 
@@ -58,13 +59,17 @@ def load_checkpoint(hyperparams, checkpoint_path, name):
 
 
 # load pretrained model so can perform inference.
-def load_pretrained(checkpoint_path, name):
+def load_pretrained(checkpoint_path, name="best_model"):
     model_data = retrieve_model_data(checkpoint_path=checkpoint_path)
-    hyperparams = model_data["hyperparams"]
-    test_batches = model_data["test_batches"]
-    model = initialize_model(hyperparams)
-    checkpoint = torch.load(f"{checkpoint_path}{name}.tar") 
-    model.load_state_dict(checkpoint['model_state_dict'])
+    #dev_batches = model_data["dev_batches"]
+    #test_batches = model_data["test_batches"]
+    #src_word_to_idx = model_data["src_word_to_idx"] # for use in demo
+    #idx_to_trg_word = model_data["idx_to_trg_word"]
+    model, _, _ = load_checkpoint(model_data["hyperparams"], checkpoint_path, name)
     model.decoder.set_inference_alg("beam_search")
 
-    return model, test_batches
+    return model, model_data
+
+
+def retrieve_model_data(checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/my_model/'):
+    return load(open(f"{checkpoint_path}model_data.pkl", 'rb'))

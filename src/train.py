@@ -5,10 +5,7 @@ import time, random
 
 from src.predict import predict
 from src.evaluate import evaluate
-from src.preprocessing.preprocess import retrieve_model_data
-from src.preprocessing.corpus_utils import get_references
-from src.model.lstm.model import EncoderDecoder
-from src.model_utils import load_checkpoint, store_checkpoint
+from src.model_utils import load_checkpoint, store_checkpoint, retrieve_model_data
 # -train_batches holds training data as tensors.
 # -dev_batches holds dev data as tensors, for estimating model quality
 # by its performance (bleu score) on the dev set.

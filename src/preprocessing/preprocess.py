@@ -1,5 +1,5 @@
 import torch
-from pickle import load, dump
+from pickle import dump
 
 from src.preprocessing.corpus_utils import get_references, read_tokenized_corpuses
 from src.preprocessing.build_word_vocabs import build_word_vocabs
@@ -26,6 +26,7 @@ def construct_model_data(*corpus_names,
     
     vocab_type = hyperparams["vocab_type"]
     # which variants of preprocessed corpuses to load depends on vocab type.
+    # each entry of corpuses is a list of sentences, where sentence is list of words.
     corpuses = read_tokenized_corpuses(*corpus_names, path=corpus_path, prefix=vocab_type+"_")
         
     # build vocabs
@@ -91,7 +92,3 @@ def construct_model_data(*corpus_names,
             f.write(f"{hp}: {hyperparams[hp]}")
             f.write('\n')
         f.write('\n\n\n\n\n')
-
-
-def retrieve_model_data(checkpoint_path='/content/gdrive/My Drive/NMT/checkpoints/my_model/'):
-    return load(open(f"{checkpoint_path}model_data.pkl", 'rb'))
