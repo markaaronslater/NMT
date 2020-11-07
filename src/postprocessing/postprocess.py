@@ -1,12 +1,13 @@
 from sacremoses import MosesDetokenizer
 
-# translation_idx_pairs is list of pairs, where:
-# -1st component is (bsz x T) tensor, where T is number of decode time steps
-# (at least 1, and at most max_src_len + decode_slack), where row i holds the
-# translation for i'th src sentence of test batch.
-# -2nd component is (bsz,) tensor, where entry i holds line of src sentence
-# in source corpus that i'th translation is for.
+
 def postprocess(translation_batches, idx_to_trg_word, eos_idx, vocab_type="subword_joint"):
+    # translation_idx_pairs is list of pairs, where:
+    # -1st component is (bsz x T) tensor, where T is number of decode time steps
+    # (at least 1, and at most max_src_len + decode_slack), where row i holds the
+    # translation for i'th src sentence of test batch.
+    # -2nd component is (bsz,) tensor, where entry i holds line of src sentence
+    # in source corpus that i'th translation is for.
     translation_idx_pairs = []
     for (translation, corpus_indices) in translation_batches:
         translation = extract_translation(translation.tolist(), eos_idx)
@@ -30,8 +31,8 @@ def postprocess(translation_batches, idx_to_trg_word, eos_idx, vocab_type="subwo
     translations = [md.detokenize(translation) for translation in translations]
 
     # Moses detokenizer is not fully compatible with Stanza tokenization
-    # scheme, which 
-    # fill in some of the gaps in Moses detokenizer.
+    # scheme, which, e.g., tokenizes "didn't "into "did n't"
+    # -> fill in some of these gaps.
     translations = custom_detokenize(translations)
 
     return translations
@@ -111,9 +112,7 @@ def desegment_subwords(translations):
     return desegmented_translations
 
 
-
 def custom_detokenize(translations):
-    #print("applying detok")
     detok_translations = []
     for translation in translations:
         detok = translation.replace(" n't", "n't")

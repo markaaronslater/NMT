@@ -5,13 +5,12 @@ from src.predict import predict
 from src.preprocessing.build_batches import get_test_batches
 from src.preprocessing.apply_vocab import to_indices
 
-
 # translate list of German test sentences in end-to-end fashion.
 # -> performs entire preprocessing, prediction, and postprocessing
-# pipelines on a set of user-inputted German sentences (for demo), or an
+# pipelines on a list of user-inputted German sentences (for demo), or an
 # entire test set (for replicating BLEU results).
 
-# input is list of German sentences as strings 
+# input is list of German sentences as strings .
 def translate(input, stanza_processor, translator, src_word_to_idx, idx_to_trg_word,
             bpe, checkpoint_path='', device='cuda:0', bsz=32):
     print("tokenizing, multiword-token-expanding, pos-tagging...")

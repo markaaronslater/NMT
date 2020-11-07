@@ -1,6 +1,6 @@
 # each line of config_file is of the form:
 # hyperparameter_name=hyperparameter_setting
-# (see notebook or readme for supported hyperparameters and their names)
+# (see readme for supported hyperparameters and their names)
 # ex)
 # bidirectional_encoder=True
 # enc_hidden_size=500
@@ -42,7 +42,7 @@ def process_configs(hyperparams):
     assert hyperparams["trim_type"] in ["threshold", "top_k"]
 
     # ensure every setting provided for integer-valued hyperparams is castable as int.
-    int_hyperparams =   [   "train_bsz", "dev_bsz", "test_bsz", 
+    int_hyperparams =   [   "train_bsz", "dev_bsz", 
                             "enc_input_size", "enc_hidden_size", "enc_num_layers",
                             "dec_input_size", "dec_hidden_size", "dec_num_layers",
                             "beam_width", "decode_slack", 

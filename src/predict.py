@@ -4,7 +4,6 @@ import time
 
 from src.postprocessing.postprocess import postprocess
 
-
 def predict(model, test_batches, idx_to_trg_word, folder='', ep='', write=True):
     with torch.no_grad():
         model.eval()

@@ -46,13 +46,9 @@ def get_train_batch(batch, device):
     decoder_targets = [trg_batch[i][1:] for i in range(bsz)] # dn include <sos>
     # "targets", in this case, refers to ground truth tokens of target sentence.
 
-    # src_lengths = torch.tensor([len(src_sent) for src_sent in encoder_inputs], device=device).long()
-    # trg_lengths = torch.tensor([len(trg_sent) for trg_sent in decoder_targets], device=device).long()
-    ######## changed: apparently lengths now need to go on the CPU #########
     src_lengths = torch.tensor([len(src_sent) for src_sent in encoder_inputs]).long()
     trg_lengths = torch.tensor([len(trg_sent) for trg_sent in decoder_targets]).long()
-    ###########################################################################
-    #print(f"trg_lengths: {trg_lengths}")
+    
     # determine the length that each sentence of a batch must be padded to.
     max_src_len = src_lengths.max()
     max_trg_len = trg_lengths.max()
@@ -60,13 +56,11 @@ def get_train_batch(batch, device):
     padded_encoder_inputs = torch.zeros(bsz, max_src_len, device=device).long() 
     padded_decoder_inputs = torch.zeros(bsz, max_trg_len, device=device).long() 
     padded_decoder_targets = torch.zeros(bsz, max_trg_len, device=device).long()
-    #print(f"padded_decoder_targets1: {padded_decoder_targets}")
 
     for i in range(bsz):
         padded_encoder_inputs[i,:src_lengths[i]] = torch.tensor(encoder_inputs[i]).long()
         padded_decoder_inputs[i,:trg_lengths[i]] = torch.tensor(decoder_inputs[i]).long()
         padded_decoder_targets[i,:trg_lengths[i]] = torch.tensor(decoder_targets[i]).long()
-    #print(f"padded_decoder_targets2: {padded_decoder_targets}")
 
     # (in DESCENDING order).
     sorted_src_lengths, idxs_in_encoder_inputs = src_lengths.sort(0, descending=True)
@@ -131,10 +125,8 @@ def get_test_batches(src_sentences, bsz, device):
 
 def get_test_batch(batch, device):
     bsz = len(batch) 
-    #src_lengths = torch.tensor([triple[1] for triple in batch], device=device).long()
-    ####### move to cpu ######
     src_lengths = torch.tensor([triple[1] for triple in batch]).long()
-    ##########################
+
     # so that can unsort predicted translations.
     corpus_indices = torch.tensor([triple[0] for triple in batch], device=device).long()
 

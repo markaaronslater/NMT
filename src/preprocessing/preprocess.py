@@ -7,15 +7,11 @@ from src.preprocessing.build_subword_vocabs import build_subword_vocabs
 from src.preprocessing.apply_vocab import apply_vocab
 from src.preprocessing.build_batches import get_batches
 from src.model_utils import initialize_model, initialize_optimizer, store_checkpoint
-# -converts all preprocessed corpuses into tensors that can be directly
-# passed to a model, and saves them to pickle files.
-# -returns corresponding hyperparameters that can be used to instantiate
-# a compatible model.
-
-# construct train, dev and test data to be used by model during training
-# and inference, so that corpus preprocessing ensured to be compatible
-# with model hyperparameters, e.g., vocab type, bsz, etc.
-# gets saved to same folder the checkpoints are stored.
+# given a set of hyperparameters, converts preprocessed train and dev corpuses
+# into tensors that can be directly passed to a model, and saves them to
+# pickle files. initializes a model checkpoint that can be loaded and trained
+# from scratch. writes hyperparameters to the statistics file where training
+# epochs will be logged, in order to facilitate hyperparameter search.
 def construct_model_data(*corpus_names,
         hyperparams={},
         corpus_path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/',
@@ -26,8 +22,8 @@ def construct_model_data(*corpus_names,
     
     vocab_type = hyperparams["vocab_type"]
     # which variants of preprocessed corpuses to load depends on vocab type.
-    # each entry of corpuses is a list of sentences, where sentence is list of words.
     dir = "subword_segmented/" if vocab_type == "subword_joint" else "truecased/"
+    # each entry of corpuses is a list of sentences, where sentence is list of words.
     corpuses = read_tokenized_corpuses(*corpus_names, path=corpus_path+dir, prefix=vocab_type+"_")
         
     # build vocabs
@@ -76,8 +72,8 @@ def construct_model_data(*corpus_names,
     # store corresponding preprocessing of the corpuses, vocab info, and other
     # immutable data used during training.
     model_data = {"train_batches":train_batches,
-        "dev_batches":dev_batches,
-        "references":get_references(path=corpus_path, overfit=overfit),
+        "dev_batches":dev_batches, # for making dev predictions during training
+        "references":get_references(path=corpus_path, overfit=overfit), # for making dev predictions during training
         "trg_word_to_idx":vocabs["trg_word_to_idx"], # for use in unittests ensuring batches constructed properly
         "idx_to_trg_word":vocabs["idx_to_trg_word"], # for making dev predictions during training, and test predictions during demo
         "src_word_to_idx":vocabs["src_word_to_idx"], # for making test predictions during demo

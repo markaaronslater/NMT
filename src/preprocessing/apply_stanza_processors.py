@@ -44,13 +44,12 @@ def apply_stanza_processors(*corpus_names,
             apply_stanza_processor(corpus_name, corpuses[corpus_name], trg_processor, path=stanza_path, doc_size=doc_size)
     print("done.")
 
+
 # creates massive list that does not fit in RAM, so process the corpus 
 # <doc_size> sentences at a time (e.g., if doc_size=10,000, then English
 # train set, which is ~200,000, gets processed as ~20 pieces). each piece saved
 # to separate pickle file, so when retrieve outputs, must merge them back
 # into single processed corpus.
-# (??will I also need to perform truecasing on single pieces at a time??)
-### TODO: add start point to continue off from, if Colab runtime disconnects, etc.
 def apply_stanza_processor(corpus_name, corpus, processor, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/stanza_outputs/', doc_size=10000):
     for j in range(0, len(corpus), doc_size):
         # supply input in format required for disabling sentence segmentation in tokenizer
@@ -65,9 +64,9 @@ def apply_stanza_processor(corpus_name, corpus, processor, path='/content/gdrive
 
 # this might not fit in memory. in that case, do as truecase_corpuses() does,
 # and load and process single piece at a time.
-def merge_corpus_pieces(corpus_name, num_pieces, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/stanza_outputs/'):
-    merged_corpus = []
-    for piece_number in range(1, num_pieces+1):
-        merged_corpus += load(open(f"{path}stanza_{corpus_name}_{piece_number}.pkl", 'rb'))
+# def merge_corpus_pieces(corpus_name, num_pieces, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/stanza_outputs/'):
+#     merged_corpus = []
+#     for piece_number in range(1, num_pieces+1):
+#         merged_corpus += load(open(f"{path}stanza_{corpus_name}_{piece_number}.pkl", 'rb'))
 
-    return merged_corpus
+#     return merged_corpus

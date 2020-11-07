@@ -27,8 +27,6 @@ def initialize_optimizer(model, hyperparams):
     return optimizer
 
 
-
-
 # name in ["best_model", "most_recent_model"]
 # checkpoint of a training session.
 def store_checkpoint(model, optimizer, epoch, epoch_loss, bleu, prev_bleu,
@@ -56,15 +54,9 @@ def load_checkpoint(hyperparams, checkpoint_path, name):
     return model, optimizer, checkpoint
 
 
-
-
 # load pretrained model so can perform inference.
 def load_pretrained(checkpoint_path, name="best_model"):
     model_data = retrieve_model_data(checkpoint_path=checkpoint_path)
-    #dev_batches = model_data["dev_batches"]
-    #test_batches = model_data["test_batches"]
-    #src_word_to_idx = model_data["src_word_to_idx"] # for use in demo
-    #idx_to_trg_word = model_data["idx_to_trg_word"]
     model, _, _ = load_checkpoint(model_data["hyperparams"], checkpoint_path, name)
     model.decoder.set_inference_alg("beam_search")
 

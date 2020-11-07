@@ -1,8 +1,7 @@
 from pickle import load, dump
 
-# utility functions for loading/storing corpuses from/to text files,
+# utility functions for loading corpuses from text files,
 # examining corpus contents, etc.
-
 
 def read_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
     corpuses = {}
@@ -22,23 +21,6 @@ def read_corpus(corpus_name, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16
         start = _start-1 # convert to 0-based idxing
 
     return corpus[start:start+upper]
-
-
-# used to create "checkpoints" in the preprocessing pipeline, where rather
-# than performing step again, can directly load preprocessed corpus.
-def write_corpuses(corpuses, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
-    for corpus_name in corpuses:
-        write_corpus(corpus_name, corpuses[corpus_name], path, prefix, _start, num)
-
-
-def write_corpus(corpus_name, corpus, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix='', _start=1, num=None):
-    assert prefix in ['', 'word_', 'subword_joint_', 'subword_ind_']
-    upper = num if num is not None else len(corpus)
-    start = _start-1 # convert to 0-based idxing
-    with open(path + prefix + corpus_name, mode='wt', encoding='utf-8') as f:
-        for sent in corpus[start:start+upper]:
-            f.write(' '.join(sent))
-            f.write('\n')
 
 
 # reads and white-space splits a pre-tokenized corpus stored in a file.
@@ -70,7 +52,6 @@ def get_references(path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', 
             return [read_corpus("test.en", path=path)]
     else:
         return [read_corpus("train.en", path=path, num=10)]
-
 
 
 # return true if is a source corpus, and false if is a target corpus

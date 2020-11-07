@@ -1,5 +1,5 @@
 from collections import Counter
-# wrapper function that given corpuses, learns a word-level vocab based
+# given corpuses, learns a word-level vocab based
 # on the src and trg train corpuses, that uses some trim function so
 # that all words that do not fit in the vocabulary will be replaced in the
 # corpus by the unknown token, <unk>.

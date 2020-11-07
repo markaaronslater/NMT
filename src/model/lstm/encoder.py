@@ -31,7 +31,7 @@ class Encoder(nn.Module):
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)
         ### added:
-        #self.embed.weight.data.uniform_(-.1, .1)
+        self.embed.weight.data.uniform_(-.1, .1)
 
 
 

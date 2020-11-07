@@ -1,6 +1,5 @@
 from pickle import load
 
-
 from src.preprocessing.corpus_utils import is_src_corpus
 
 def truecase_corpuses(*corpus_names, corpus_path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/'):
