@@ -4,53 +4,35 @@ coming soon:
 
 -support for transformer architecture
 
+-support for convolutional encoder
+
 -support for more language pairs and translation directions
 
 
 
 
 **Optimally efficient:**
-* no unnecessary loops in training and inference code.
-* implements intelligent batching so that number of pad tokens in batches (which contain variable-length sequences) is minimized for both training and inference.
-* training uses PackedSequence objects to avoid needless computation inside lstm layer(s).
+* Model forward passes are fully vectorized to operate on batches of variable-length sequences. Intelligent batching is performed so that the number of pad tokens per batch is minimized.
+* Beam search inference translates batches of German sentences in parallel, for each of which it computes several candidate translations in parallel.
+* Training uses PackedSequence objects to minimize computation inside lstm layer(s).
+
 
 **Compact yet performant:**
-* employs variety of x in order to obtain BLEU score of 29 on y, even though uses only z total parameters (requires roughly Y GB of memory to train on Colab GPU, when use train and dev bsz's of 64), by using advanced techniques like weight sharing.
-easily fits in gpu memory of free cloud providers, like Google Colab
-requires only modestly sized 
-default encoder and decoder each only contain single lstm layer.
-encoder lstm is bidirectional, and its states are projected
-evaluated using sacrebleu, the most strict and reliable bleu score calculator.
+* Achieves a BLEU score of 27 on the IWSLT 2014 test set, even though consists of only x total parameters (makes extensive use of parameter sharing, and preprocesses datasets such that vocabulary size is minimized. see below).
+* When use a batch size of 64, this requires ~ y GB of memory to train (this easily fits on, e.g., a Tesla T4 GPU, which is freely available on Google Colab).
 
-
-
-**Supports variety of model, training and prediction features, including:**
-* scaled and standard dot product attention mechanisms.
-* beam search and greedy search inference algorithms.
-* extraction and application of either word-level or subword-level model vocabularies.
-
-**Highly flexible and easily configurable:**
-* specify hyperparameter settings and architectural variations through set of configuration files (see options below).
-* config-importer ensures combination of settings is valid (raises assertion error).
-* several word-level vocab algs, like top_k and threshold.
 
 **Robust and convenient:**
-* training algorithm performs early-stopping and saves both "most-recent" (so can resume training at later date, or gracefully recover from Colab runtime disconnections, etc.) and "best-so-far" (so can extract for later predicting test set, etc.) model checkpoints in Google Drive.
-* automatically logs hyperparameter settings used by given model inside its checkpoints folder, along with training stats and dev set bleu scores, to facilitate hyperparameter search.
-* train model from scratch or resume training a checkpoint where left off
-* automates organization of models within file system . 
-* streamlined training and hyperparameter search infrastructure.
+* Training loop performs early-stopping, and saves both "most-recent-epoch" (so can resume training at later date, or gracefully recover from Colab runtime disconnections, etc.) and "best-so-far" (so can load for later predicting test set, etc.) model checkpoints in Google Drive.
+* To facilitate hyperparameter search, automated logging system organizes model checkpoints inside a directory hierarchy, and stores them along with files listing their hyperparameter settings, per-epoch training stats (including dev set bleu scores), and per-epoch greedy predictions for the dev set (to observe translation quality)
 
 
-**Corpus preprocessing**
-
-all preprocessing steps save their outputs to corresponding files (see How to Run, below), so that if wish to change a given step, do not need to re-run prior steps.
-* all preprocessing performed starting from parallel sets of German and English training corpuses, "train.de" and "train.en", where line i of "train.en" is the ground-truth English translation of line i of "train.de".
-* Calls a series of pre-trained Stanford CoreNLP (Stanza) processors that perform tokenization, multi-word token expansion, and part-of-speech tagging on each corpus.
-* This part-of-speech information is then leveraged by truecasing algorithm that employs linguistic heuristics to decide whether or not to convert a word to lowercase (so that a word's meaning is not distributed across capitalized and lower-case embeddings, size of vocabulary is reduced, etc.).
-* These truecased corpuses of words are then optionally segmented into corpuses of subwords (employing byte-pair-encodings of https://github.com/rsennrich/subword-nmt-nmt).
-* Lastly, vocabularies are built and applied to the corpuses, from which intelligently batched sets of tensors are constructed ahead of training (to save time in forward pass), and are packaged along with all other relevant data (e.g., masks used by decoder during attention computation).
-* coming soon: additional preprocessing steps, such as compound-splitting and punctuation-collapsing.
+**Highly flexible and easily configurable:**
+* Specify hyperparameter settings, as well as vocabulary and architectural variations through set of configuration files (see options below). config-importer ensures combination of settings is valid (raises assertion error).
+* Supports a variety of architectural, training and inference features, including:
+  * Scaled and standard dot product attention mechanisms.
+  * Beam search and greedy search inference algorithms.
+  * Extraction and application of either word-level or subword-level model vocabularies. Word-level vocab can be constructed by either top_k or thresholding algorithms.
 
 
 
@@ -67,13 +49,13 @@ all preprocessing steps save their outputs to corresponding files (see How to Ru
 
 **How To Run:**
 
-notebooks use Google Drive interface when run in Google Colab environment, so that they can store and load model checkpoints, write training epoch stats, and write translations to files. Place cloned NMT folder inside 'My Drive' folder of Google Drive.
+Notebooks use Google Drive interface when run in Google Colab environment, so that they can store and load model checkpoints, write training epoch stats, and write translations to files. Place cloned NMT folder inside 'My Drive' folder of Google Drive.
 
 * playground.ipynb
 
-  open notebook in Google Colab (http://colab.research.google.com) and follow its instructions to:
-  * observe translations of sample German sentences into English.
-  * interactively input German sentences to observe translation output, and coming soon: compare translation side-by-side with Google translate's output.
+  Open notebook in Google Colab (http://colab.research.google.com) and follow its instructions to:
+  * a) interactively input German sentences to observe translation output.
+  * b) replicate reported BLEU score on the IWSLT 2014 test set.
 
 
 
@@ -82,35 +64,69 @@ notebooks use Google Drive interface when run in Google Colab environment, so th
 * NMT-driver.ipynb
 
   follow notebook instructions to:
-  * a) replicate any subset of the 6 steps (see below), each in its own cell, needed to preprocess the data, train, and evaluate a model,
-  * b) run unit tests to show correctness of model implementations, or
-  * c) load a pre-trained model checkpoint to determine BLEU score on test set.
+  * a) replicate the 6 total steps -- each in its own cell -- needed to preprocess the datasets, as well as train and evaluate a model.
+  * b) run unit tests to show correctness of model implementations.
+
+  (all preprocessing steps save their outputs to corresponding files, so that if wish to change a given step, do not need to re-run prior steps).
+
+  step 1 - Apply series of pre-trained Stanza (Stanford CoreNLP) processors, which perform tokenization, multi-word token expansion, and part-of-speech tagging
+  * processor outputs are saved to pickle files with the prefix "stanza_" inside corpuses/iwslt16_en_de/stanza_outputs/ (each corpus is processed and saved in pieces, bc entire output does not fit in memory)
 
 
-  step 0 - make necessary folders not included in repo, e.g., checkpoints, stanza_outputs, truecased, subword_segmented
-  
-  step 1 - apply Stanza processors, which perform tokenization, multi-word token expansion, and part-of-speech tagging
-  * processor outputs are saved to pickle files with the prefix "stanza_" inside corpuses/iwslt16_en_de/stanza_outputs/
-  * each corpus is processed in pieces, bc entire output does not fit in memory.
+  step 2 - Truecase the corpuses using linguistic heuristics that leverage morphological data produced in step 1
+  * truecased corpuses are saved to files with the prefix "word_" inside corpuses/iwslt16_en_de/truecased/
+    * This step acts to reduce the vocabulary (and therefore embeddings matrix sizes) of the model, since a word no longer appears in capitalized and lowercase variants (which would give it two slots in the embeddings table) for exclusively syntactic purposes, e.g., starting a sentence, quotation, etc. (To produce fully cased predictions, casing is heuristically applied during post-processing).
+    * Further, this allows the model to consolidate a word's meaning into a single entry, facilitating training.
+    * coming soon: additional preprocessing steps, such as compound-splitting and punctuation-collapsing.
 
 
-  step 2 - truecase the corpuses using linguistic heuristics that leverage morphological data produced by morphological data tagger
-  * truecased corpuses are saved to files with the prefix "word_" inside corpuses/iwslt16_en_de/truecased/ (they are used directly by models that employ a word-level vocabulary).
-
-  step 3 - segment corpuses of words into corpuses of subwords
+  step 3 - (optional) Segment corpuses of words into corpuses of subwords (using byte-pair-encodings of https://github.com/rsennrich/subword-nmt)
   * segmented corpuses are saved to files with the prefix "subword_joint_" or "subword_ind_" inside corpuses/iwslt16_en_de/subword_segmented/, depending on if learn a joint vocabulary or separate, independent vocabularies, respectively, for the source and target languages.
 
-  step 4 - convert corpuses into batched sets of tensors that can be directly passed to model
-  * all train, dev and test batches, along with the vocabularies and all hyperparameters for instantiating a corresponding model are stored in serialized dictionary inside data/
+
+  step 4 - Convert corpuses into batched sets of tensors that can be directly passed to model
+  * all train and dev batches (and corresponding data, e.g., attention masks, indices for unsorting the source sentences, etc.), vocabularies, and hyperparameters for instantiating a corresponding model are stored in model_data.pkl inside checkpoints/\<model_name\>
 
 
-  step 5 - train model
-  * model from best epoch (as measured by BLEU score on the dev set) and most recent model checkpoints are stored in checkpoints/
+  step 5 - Train model
+  * model from best epoch (as measured by BLEU score on the dev set) and most recent model checkpoints are stored in checkpoints/\<model_name\>
 
 
-  step 6 - evaluate model
+  step 6 - Evaluate model
   * uses sacreBLEU to measure BLEU score of the model's translations for the test set.
 
+
+
+
+
+
+
+
+
+
+
+**Default architecture overview:**
+Overview of the pre-trained model (stored as pretrained inside X).
+(note: nearly all of these layers can be altered by setting the configuration files (see below))
+To reduce the total number of parameters, the following weights are shared:
+* Encoder and decoder share the same embeddings matrix (i.e., model uses a joint German-English subword vocabulary).
+* Decoder's output matrix weights are tied to the embeddings table.
+
+Encoder:
+* A single bidirectional lstm layer reads the source sentence in the forward and reverse directions. For a given source word, its forward and backward hidden representations are concatenated together. The set of concatenated representations are then passed through a custom dropout layer (where the same dropout mask is applied to each timestep).
+* An additional layer then projects these states into a set of "keys" (for use by the decoder's attention mechanism) with the same dimensionality as the decoder's hidden layer size, followed by a tanh nonlinearity. A different set of weights is used to convert the hidden state from the final encoder timestep into the initial decoder lstm hidden state.
+
+Decoder:
+* A single lstm layer reads the target sentence in the forward direction, and custom dropout is then applied as in the encoder.
+* The attention mechanism is then applied, where for each decoder hidden state (the "query"), the dot product is computed with each of the keys, which are then normalized into a set of weights for computing a weighted average of each encoder hidden state, called the "context".
+* This context vector is then concatenated to the decoder hidden state, and passed through an "attention layer", that projects it to the same dimensionality as the embeddings, followed by a tanh nonlinearity. This is then projected by the embeddings matrix to a |V|-dimensional vector, where |V| is the vocab size, and entry i holds the score that the i'th subword of the shared vocabulary is the next word of the target sentence.
+* During training, the log softmax is applied, and the cross-entropy loss is computed with respect to the actual next target word. 
+* During (greedy) inference, the target word with the highest score is passed as the input for the next decoder timestep.
+
+
+
+**Corpus Overview**
+Model is trained on the IWSLT 2016 corpus, which consists of ~200,000 German-English pairs of text spans, where the English span is the ground-truth translation of the German span. A text span is usually one (but sometimes multiple) sentence(s). This corpus is comprised of transcribed TED talks, which are "challenging due to their variety in topics, but are very benign as they are very thoroughly rehearsed and planned, leading to easy to recognize and translate language." 
 
 
 
@@ -172,3 +188,4 @@ src_thres | 2 | int | integer denoting the minimum number of times a word must o
 trg_thres | 2 | int | (only used if trim_type == threshold)
 num_merge_ops | 30000 | int | used by bpe-encodings algorithm for setting subword vocab size (only used if vocab_type != word)
 vocab_threshold | 10 | int | how many times subword must occur in corpus in order to not "de-merge" it back into smaller subwords (for handling out-of-vocabulary words at test time) (only used if vocab_type == subword_joint)
+

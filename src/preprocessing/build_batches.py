@@ -5,8 +5,8 @@ import torch.nn.functional as F
 import time
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-# convert all train/dev/test data into padded batches of tensors.
-def get_batches(corpuses, train_bsz=64, dev_bsz=32, test_bsz=16, device="cuda:0", overfit=False):
+# convert all train/dev data into padded batches of tensors.
+def get_batches(corpuses, train_bsz=64, dev_bsz=32, device="cuda:0", overfit=False):
     # train_batches is a list of (encoder_inputs, decoder_inputs, decoder_targets) triples.
     start_time = time.time()
     train_batches = get_train_batches(corpuses["train.de"], corpuses["train.en"], train_bsz, device)
@@ -20,11 +20,7 @@ def get_batches(corpuses, train_bsz=64, dev_bsz=32, test_bsz=16, device="cuda:0"
     dev_batches = get_test_batches(corpuses["dev.de"], dev_bsz, device) if not overfit else get_test_batches(corpuses["train.de"], dev_bsz, device)
     print(f"took {time.time()-start_time} seconds to produce dev batches")
 
-    start_time = time.time()
-    test_batches = get_test_batches(corpuses["test.de"], test_bsz, device) if not overfit else {} # when unit testing with toy corpuses, there is no test set
-    print(f"took {time.time()-start_time} seconds to produce test batches")
-
-    return train_batches, dev_batches, test_batches
+    return train_batches, dev_batches
 
 
 def get_train_batches(src_sentences, trg_sentences, bsz, device):

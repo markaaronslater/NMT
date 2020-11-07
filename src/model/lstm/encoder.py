@@ -31,7 +31,7 @@ class Encoder(nn.Module):
         # architecture
         self.embed = nn.Embedding(self.vocab_size, self.input_size)
         ### added:
-        self.embed.weight.data.uniform_(-.1, .1)
+        #self.embed.weight.data.uniform_(-.1, .1)
 
 
 
@@ -69,8 +69,9 @@ class Encoder(nn.Module):
             # project encoder_states back to decoder_hidden_size, so can apply attention
             #encoder_states = F.relu(self.project_keys(encoder_states)) 
             ### remove nonlinearity ###
-            encoder_states = self.project_keys(encoder_states)
+            #encoder_states = self.project_keys(encoder_states)
             ########
+            encoder_states = torch.tanh(self.project_keys(encoder_states)) 
 
         # unsorting step:
         #!!!change so that only needs to do this when in training mode.
@@ -94,14 +95,14 @@ class Encoder(nn.Module):
             # from each direction, for final time step.
             final_fwd_h, final_bwd_h = hn[0:hn.size(0):2], hn[1:hn.size(0):2] 
             ### changed: ###
-            #final_fwd_c, final_bwd_c = cn[0:cn.size(0):2], cn[1:cn.size(0):2]
+            final_fwd_c, final_bwd_c = cn[0:cn.size(0):2], cn[1:cn.size(0):2]
             ################
             # -> each is (num_layers x bsz x hidden_size)
 
             # concatenate directions.
             initial_h = torch.cat((final_fwd_h, final_bwd_h), dim=2) 
             ###### changed ######
-            #initial_c = torch.cat((final_fwd_c, final_bwd_c), dim=2)
+            initial_c = torch.cat((final_fwd_c, final_bwd_c), dim=2)
             ############
             # -> each is (num_layers x bsz x 2*hidden_size)
 
@@ -111,7 +112,8 @@ class Encoder(nn.Module):
 
             ### change bridge to tanh, and do not pass memory cell ###
             initial_h = torch.tanh(self.bridge(initial_h)) 
-            initial_c = torch.zeros_like(initial_h)
+            initial_c = torch.tanh(self.bridge(initial_c)) 
+            #initial_c = torch.zeros_like(initial_h)
             ###############
             # -> each is (num_layers x bsz x hidden_size)
 

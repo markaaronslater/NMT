@@ -55,8 +55,9 @@ def test_default_subword_model(checkpoint_path='/content/gdrive/My Drive/NMT/uni
     hyperparams = import_configs(config_path=config_path, unittesting=True)
     # use subword-level vocab
     hyperparams["vocab_type"] = "subword_joint"
-    hyperparams["learning_rate"] = .01 # increase learning rate
-    print(f"learning_rate: {hyperparams['learning_rate']}")
+    #hyperparams["learning_rate"] = .01 # increase learning rate
+    print(f"vocab_type: {hyperparams['vocab_type']}")
+    print(f"tie_weights: {hyperparams['tie_weights']}")
 
     construct_model_data("train.de", "train.en", hyperparams=hyperparams,
                         corpus_path=corpus_path, checkpoint_path=checkpoint_path, 

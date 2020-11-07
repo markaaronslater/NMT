@@ -27,13 +27,14 @@ def construct_model_data(*corpus_names,
     vocab_type = hyperparams["vocab_type"]
     # which variants of preprocessed corpuses to load depends on vocab type.
     # each entry of corpuses is a list of sentences, where sentence is list of words.
-    corpuses = read_tokenized_corpuses(*corpus_names, path=corpus_path, prefix=vocab_type+"_")
+    dir = "subword_segmented/" if vocab_type == "subword_joint" else "truecased/"
+    corpuses = read_tokenized_corpuses(*corpus_names, path=corpus_path+dir, prefix=vocab_type+"_")
         
     # build vocabs
     if vocab_type in ["word"]:
         vocabs = build_word_vocabs(corpuses, hyperparams)
     elif vocab_type in ["subword_ind", "subword_joint", "subword_pos"]:
-        vocabs = build_subword_vocabs(corpus_path, vocab_type, hyperparams["vocab_threshold"], src_vocab_file, trg_vocab_file)
+        vocabs = build_subword_vocabs(corpus_path+dir, vocab_type, hyperparams["vocab_threshold"], src_vocab_file, trg_vocab_file)
     
     # now that know the vocab sizes, can treat them as hyperparameters.
     hyperparams["src_vocab_size"] = len(vocabs["src_word_to_idx"])
@@ -57,7 +58,7 @@ def construct_model_data(*corpus_names,
     # package corpuses up into batches of model inputs, along with other necessary
     # data, such as masks for attention mechanism, lengths for efficient
     # packing/unpacking of PackedSequence objects, etc.
-    train_batches, dev_batches, test_batches = get_batches(corpuses, train_bsz=hyperparams["train_bsz"], dev_bsz=hyperparams["dev_bsz"], test_bsz=hyperparams["test_bsz"], device=hyperparams["device"], overfit=overfit)
+    train_batches, dev_batches = get_batches(corpuses, train_bsz=hyperparams["train_bsz"], dev_bsz=hyperparams["dev_bsz"], device=hyperparams["device"], overfit=overfit)
     
     # store initial checkpoint for a model training session,
     # holding all mutable training session data.
@@ -76,9 +77,8 @@ def construct_model_data(*corpus_names,
     # immutable data used during training.
     model_data = {"train_batches":train_batches,
         "dev_batches":dev_batches,
-        "test_batches":test_batches, # for making test predictions after model is trained
-        "references":get_references(overfit=overfit),
-        "trg_word_to_idx":vocabs["trg_word_to_idx"], # for use in test_batches
+        "references":get_references(path=corpus_path, overfit=overfit),
+        "trg_word_to_idx":vocabs["trg_word_to_idx"], # for use in unittests ensuring batches constructed properly
         "idx_to_trg_word":vocabs["idx_to_trg_word"], # for making dev predictions during training, and test predictions during demo
         "src_word_to_idx":vocabs["src_word_to_idx"], # for making test predictions during demo
         "hyperparams":hyperparams} 

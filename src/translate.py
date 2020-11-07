@@ -13,7 +13,7 @@ from src.preprocessing.apply_vocab import to_indices
 
 # input is list of German sentences as strings 
 def translate(input, stanza_processor, translator, src_word_to_idx, idx_to_trg_word,
-            bpe, device='cuda:0', bsz=32):
+            bpe, checkpoint_path='', device='cuda:0', bsz=32):
     print("tokenizing, multiword-token-expanding, pos-tagging...")
     doc = stanza_processor('\n\n'.join(input)) # returns Document object
     sentences = doc.sentences # list of Stanza Sentence objects
@@ -29,6 +29,6 @@ def translate(input, stanza_processor, translator, src_word_to_idx, idx_to_trg_w
     to_indices("user-input", subword_segmented_sentences, src_word_to_idx) # modifies in-place
     test_batches = get_test_batches(subword_segmented_sentences, bsz, device)
     print("making predictions...")
-    translations, _, _ = predict(translator, test_batches, idx_to_trg_word)
+    translations, _, _ = predict(translator, test_batches, idx_to_trg_word, checkpoint_path)
 
     return translations

@@ -42,6 +42,7 @@ def write_corpus(corpus_name, corpus, path='/content/gdrive/My Drive/NMT/corpuse
 
 
 # reads and white-space splits a pre-tokenized corpus stored in a file.
+# returns list of lists of words.
 def read_tokenized_corpuses(*corpus_names, path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', prefix=''):
     corpuses = read_corpuses(*corpus_names, path=path, prefix=prefix)
     tokenize_corpuses(corpuses)
@@ -60,11 +61,13 @@ def tokenize_corpus(corpus):
 
 
 # load target corpuses in format required by sacreBLEU, for evaluation of predictions.
-def get_references(path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', overfit=False):
+def get_references(path='/content/gdrive/My Drive/NMT/corpuses/iwslt16_en_de/', overfit=False, dev=True):
     if not overfit:
         # only one set of references, so construct singleton list of lists of sentences.
-        return [read_corpus("dev.en", path=path)]
-        #ref_corpuses["test.en"] = [read_corpus("test.en", path=path)]
+        if dev:
+            return [read_corpus("dev.en", path=path)]
+        else:
+            return [read_corpus("test.en", path=path)]
     else:
         return [read_corpus("train.en", path=path, num=10)]
 

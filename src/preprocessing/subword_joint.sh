@@ -13,10 +13,8 @@ echo "applying bpe with vocab threshold of $2 to train..."
 subword-nmt apply-bpe -c "$4"bpe_codes --vocabulary "$4"vocab.de --vocabulary-threshold "$2" < "$3"word_train.de > "$4"subword_joint_train.de
 subword-nmt apply-bpe -c "$4"bpe_codes --vocabulary "$4"vocab.en --vocabulary-threshold "$2" < "$3"word_train.en > "$4"subword_joint_train.en
 
-# apply bpe to dev and test
-echo "applying bpe with vocab threshold of $2 to dev and test..."
+# apply bpe to dev
+echo "applying bpe with vocab threshold of $2 to dev..."
 subword-nmt apply-bpe -c "$4"bpe_codes --vocabulary "$4"vocab.de --vocabulary-threshold "$2" < "$3"word_dev.de > "$4"subword_joint_dev.de
-#subword-nmt apply-bpe -c "$4"bpe_codes --vocabulary "$4"vocab.en --vocabulary-threshold "$2" < "$3"word_dev.en > "$4"subword_joint_dev.en
-subword-nmt apply-bpe -c "$4"bpe_codes --vocabulary "$4"vocab.de --vocabulary-threshold "$2" < "$3"word_test.de > "$4"subword_joint_test.de
 
 echo "done"

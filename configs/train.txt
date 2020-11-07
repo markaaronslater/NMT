@@ -1,7 +1,7 @@
 learning_rate=0.001
-L2_reg=0.0
+L2_reg=0.000001
 optimization_alg=Adam
 device=cuda:0
-train_bsz=64
-dev_bsz=64
+train_bsz=32
+dev_bsz=32
 test_bsz=32

@@ -99,6 +99,9 @@ def constrain_configs(hyperparams):
     if hyperparams['dec_num_layers'] == 1:
         assert hyperparams['dec_lstm_dropout'] == 0.0 
 
+    # if joint vocab, then share an embeddings table
+    if hyperparams["vocab_type"] == "subword_joint":
+        assert hyperparams["enc_input_size"] == hyperparams["dec_input_size"]
 
 
 # use mostly the same default hyperparams as when actually training, but overwrite

@@ -1,5 +1,6 @@
 # have already built the vocabs, so replace each word of corpus
 # with the idx it maps to in the vocab.
+# each entry of corpuses is a list of sentences, where sentence is list of words.
 def apply_vocab(corpuses, vocabs, vocab_type="word"):
     if vocab_type == "word":
         replace_with_unk_tokens(corpuses, vocabs["src_word_to_idx"], vocabs["trg_word_to_idx"])
