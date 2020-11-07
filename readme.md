@@ -1,4 +1,4 @@
-Encoder-decoder LSTM neural network that translates German into English, implemented in PyTorch.
+LSTM-based encoder-decoder neural network that translates German into English, implemented in PyTorch.
 
 coming soon:
 
@@ -63,8 +63,8 @@ Notebooks use Google Drive interface when run in Google Colab environment, so th
 
 * NMT-driver.ipynb
 
-  follow notebook instructions to:
-  * a) replicate the 6 total steps -- each in its own cell -- needed to preprocess the datasets, as well as train and evaluate a model.
+  Open notebook in Google Colab (http://colab.research.google.com) and follow its instructions to:
+  * a) replicate the 6 total steps -- each in its own cell -- needed to preprocess the datasets, train, and evaluate a model.
   * b) run unit tests to show correctness of model implementations.
 
   (all preprocessing steps save their outputs to corresponding files, so that if wish to change a given step, do not need to re-run prior steps).
@@ -144,38 +144,33 @@ enc_input_size | 300 | int | embedding size
 enc_hidden_size | 600 | int |
 enc_num_layers | 1 | int | 
 enc_lstm_dropout | 0.0 | float | applied to all non-final lstm layers. different dropout mask applied for each timestep (only used if enc_num_layers > 1)
-enc_dropout | 0.2 | float | applied after final lstm layer. same dropout mask applied for each timestep
+enc_dropout | 0.2 | float | custom dropout layer applied after final lstm layer. same dropout mask applied for each timestep
 
 
 
 Decoder Options | Default Setting | Possible Settings | Comments
 --------| --------------- | ----------------- | --------
-tie_weights | False | boolean | whether or not to share weights in the embeddings matrix and the output matrix (requires input and hidden sizes to have same dimensionality)
+tie_weights | False | boolean | whether or not to share weights in the embeddings matrix and the output matrix (requires either an additional "attention layer" to project back to input size, or that the input and hidden sizes have same dimensionality)
 attention_fn | dot_product | [dot_product, scaled_dot_product, none] | whether or not to include attention mechanism, and if so, which one
-attention_layer | False | boolean | whether or not to project the attentional representations (which are contexts concatenated to hidden states) from 2*hidden_size back to hidden_size (along with a nonlinearity) before projecting them to vocab_size in output layer. only used if attention_fn is not "none". must be set to True if tie_weights == True, bc in this case hidden_size == input_size
+attention_layer | False | boolean | whether or not to include an additional layer between the attention mechanism and the output layer. only used if attention_fn is not "none". if tie_weights == True, then projects to input_size, else projects to hidden size.
 beam_width | 10 | int | how many candidate translations to consider the running probabilities of (for a single src sentence) at any given moment during beam search inference
 decode_slack | 20 | int | max number of words to predict beyond the length of corresponding source sentence length, before "times out" (controls strength of heuristic that an English translation will be a similar number of words as German source sentence) (cuts off translations that never produce \<end-of-sentence\> symbol)
 dec_input_size | 300 | int | embedding size
 dec_hidden_size | 600 | int | 
 dec_num_layers | 1 | int |  
 dec_lstm_dropout | 0.0 | float | applied to all non-final lstm layers. different dropout mask applied for each timestep (only used if dec_num_layers > 1)
-dec_dropout | 0.2 | float | applied after final lstm layer. same dropout mask applied for each timestep
+dec_dropout | 0.2 | float | custom dropout layer applied after final lstm layer. same dropout mask applied for each timestep
 
 
 
-Training Options | Default Setting | Possible Settings | Comments
+Training / Misc. Options | Default Setting | Possible Settings | Comments
 --------| --------------- | ----------------- | --------
-early_stopping | True | boolean | whether or not to quit training early if bleu scores on dev set do not improve for <early_stopping_threshold> epochs in a row (see below)
-early_stopping_threshold | 5 | int | 
-total_epochs | 30 | int | max number of epochs (can cut short if early-stopping)
 learning_rate | .001 | float | 
 L2_reg | 0.0 | float | weight decay of optimizer
 optimization_alg | Adam | [Adam, AdamW] | 
 device | cuda:0 | [cuda:0, cpu] |
-train_bsz | 64 | int |
-dev_bsz | 32 | int | 
-test_bsz | 16 | int | 
-
+train_bsz | 64 | int | size of minibatches for stochastic gradient descent
+dev_bsz | 32 | int | how many sentences to predict at a time when estimating generalizability via BLEU score on held out validation set after each epoch. 
 
 
 Vocabulary Options | Default Setting | Possible Settings | Comments
